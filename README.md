@@ -9,7 +9,6 @@ This is a basic plugin template using PrismaUI and CommonLibSSE-NG.
 ## Getting Started
 ```bat
 git clone --recurse-submodules https://github.com/PrismaUI-SKSE/PrismaUI-Example-Plugin.git
-cd PrismaUI-Example-Plugin
 ```
 
 ### Build
