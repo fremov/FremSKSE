@@ -2,7 +2,7 @@
 
 This is a basic plugin template using PrismaUI and CommonLibSSE-NG.
 
-> **You could download ready-to-use plugin for MO2 here: [Download PrismaUI-Example-Plugin](https://github.com/PrismaUI-SKSE/PrismaUI-Wiki/releases)**
+> **You can download ready-to-use plugin for MO2 here: [Download PrismaUI-Example-Plugin](https://github.com/PrismaUI-SKSE/PrismaUI-Wiki/releases)**
 
 ### Requirements
 * [XMake](https://xmake.io) [2.8.2+]
