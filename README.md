@@ -9,7 +9,6 @@ This is a basic plugin template using PrismaUI and CommonLibSSE-NG.
 ## Getting Started
 ```bat
 git clone --recurse-submodules https://github.com/PrismaUI-SKSE/PrismaUI-Example-Plugin.git
-cd PrismaUI-Example-Plugin
 ```
 
 ### Build
@@ -17,6 +16,8 @@ To build the project, run the following command:
 ```bat
 xmake build
 ```
+
+> Don't forget to move `view/index.html` to your plugin folder in `PrismaUI/<YourUIPluginName>/index.html`.
 
 > ***Note:*** *This will generate a `build/windows/` directory in the **project's root directory** with the build output.*
 
