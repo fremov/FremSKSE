@@ -14,10 +14,12 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message)
         PrismaView view = PrismaUI->CreateView("PrismaUI-Example-UI/index.html", [](std::string view) -> void {
             // View DOM is ready then you can use Invoke here (make sure that your JS methods are available after DOM is ready).
             logger::info("View DOM is ready {}", view);
+
+            PrismaUI->Invoke(view, "updateFocusLabel('No. But press F3 to focus!')");
         });
 
         // 3. Also you could to register JS listener to handling JS methods calls.
-        PrismaUI->RegisterJSListener(view, "SendDataToSKSE", [](std::string data) -> void {
+        PrismaUI->RegisterJSListener(view, "sendDataToSKSE", [](std::string data) -> void {
             logger::info("Received data from JS: {}", data);
         });
 
@@ -33,13 +35,13 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message)
             if (!hasFocus) {
                 // Focus
                 if (PrismaUI->Focus(view)) {
-                    PrismaUI->Invoke(view, "SKSE_API.call('set_preview_data', 'focused')");
+                    PrismaUI->Invoke(view, "updateFocusLabel('Yeah, it is focused! Press F3 again to unfocus.')");
                 }
             }
             else {
                 // Unfocus
                 PrismaUI->Unfocus(view);
-                PrismaUI->Invoke(view, "SKSE_API.call('set_preview_data', '')");
+                PrismaUI->Invoke(view, "updateFocusLabel('Nah, it is not focused.')");
             }
         });
 

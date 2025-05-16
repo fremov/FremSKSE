@@ -5,13 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Your View</title>
     <style>
+        * {
+            user-select: none;
+            font-family: sans-serif;
+        }
+
         .wrapper {
+            display: inline-block;
             padding: 8px;
             background-color: white;
             border-radius: 8px;
         }
         
-        #preview-data {
+        #focus-label {
             color: red;
         }
     </style>
@@ -19,20 +25,32 @@
 <body>
     <div class="wrapper">
         <div>
-            <span>Preview Data:</span>
-            <span id="preview-data"></span>
+            <span>Is focused:</span>
+            <span id="focus-label"></span>
         </div>
-        <button onclick="sendDataToSKSE()">Send Data to SKSE</button>
+        <div>
+            <div>
+                <input id="data-input" type="text" placeholder="Type some data..." />
+                <button onclick="sendInputData()">Send Data to SKSE</button>
+            </div>
+            <span id="data-sent-label" style="display: none;">Data was successfully sent, check your plugin log file!</span>
+        </div>
     </div>
 
     <script>
-        window.setPreviewData = (data) => {
-            document.querySelector("#preview-data").textContent = data;
+        // Global function which we're going to trigger from SKSE plugin with Invoke().
+        window.updateFocusLabel = (data) => {
+            document.querySelector("#focus-label").textContent = data;
         };
 
-        window.sendDataToSKSE = () => {
-            return "Hello, world!";
-        };
+        function sendInputData() {
+            const inputValue = document.querySelector("#data-input").value;
+
+            document.querySelector("#data-sent-label").style.display = 'inline';
+
+            // Sending data to SKSE plugin with registered "sendDataToSKSE" JS listener.
+            window.sendDataToSKSE(inputValue);
+        }
     </script>
 </body>
 </html>
