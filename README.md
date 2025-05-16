@@ -1,6 +1,6 @@
-# CommonLibSSE-NG Plugin Template
+# PrismaUI SKSE Plugin Template
 
-This is a basic plugin template using CommonLibSSE-NG.
+This is a basic plugin template using PrismaUI and CommonLibSSE-NG.
 
 ### Requirements
 * [XMake](https://xmake.io) [2.8.2+]
