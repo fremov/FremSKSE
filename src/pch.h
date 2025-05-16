@@ -6,7 +6,6 @@
 #include <SKSE/SKSE.h>
 
 #include <fstream>
-#include <nlohmann/json.hpp>
 
 #ifdef NDEBUG
 #	include <spdlog/sinks/basic_file_sink.h>
@@ -17,8 +16,6 @@
 
 using namespace std::literals;
 using namespace std;
-
-using JSON = nlohmann::json;
 
 namespace logger = SKSE::log;
 

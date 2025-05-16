@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your View</title>
+    <style>
+        .wrapper {
+            padding: 8px;
+            background-color: white;
+            border-radius: 8px;
+        }
+        
+        #preview-data {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div>
+            <span>Preview Data:</span>
+            <span id="preview-data"></span>
+        </div>
+        <button onclick="sendDataToSKSE()">Send Data to SKSE</button>
+    </div>
+
+    <script>
+        window.setPreviewData = (data) => {
+            document.querySelector("#preview-data").textContent = data;
+        };
+
+        window.sendDataToSKSE = () => {
+            return "Hello, world!";
+        };
+    </script>
+</body>
+</html>

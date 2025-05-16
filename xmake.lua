@@ -15,8 +15,6 @@ set_policy("package.requires_lock", true)
 add_rules("mode.release")
 add_rules("plugin.vsxmake.autoupdate")
 
-add_requires("nlohmann_json")
-
 -- targets
 target("PrismaUI-Example-Plugin")
     add_deps("commonlibsse-ng")
@@ -31,5 +29,3 @@ target("PrismaUI-Example-Plugin")
     add_headerfiles("src/**.h")
     add_includedirs("src")
     set_pcxxheader("src/pch.h")
-
-    add_packages("nlohmann_json")
