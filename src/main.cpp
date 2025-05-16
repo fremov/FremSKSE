@@ -11,7 +11,7 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message)
         PrismaUI = static_cast<PRISMA_UI_API::IVPrismaUI1*>(PRISMA_UI_API::RequestPluginAPI(PRISMA_UI_API::InterfaceVersion::V1));
 
         // 2. Create view and call "Invoke" method to send JavaScript code to view when DOM is ready.
-        PrismaView view = PrismaUI->CreateView("PrismaUI-Example-UI/index.html", [](std::string view) -> void {
+        PrismaView view = PrismaUI->CreateView("PrismaUI-Example-UI/index.html", [](PrismaView view) -> void {
             // View DOM is ready then you can use Invoke here (make sure that your JS methods are available after DOM is ready).
             logger::info("View DOM is ready {}", view);
 
