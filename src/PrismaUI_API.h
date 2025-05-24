@@ -30,7 +30,7 @@ namespace PRISMA_UI_API
 		// Create view. Initial directory of "htmlPath" is "Skyrim Special Edition/Data/PrismaUI/views/".
 		virtual PrismaView CreateView(std::string htmlPath, std::function<void(PrismaView)> onDomReadyCallback = nullptr) noexcept = 0;
 
-		// Send JavaScript code to Web UI.
+		// Send JavaScript code to Web UI. Accepts callback with return value at second argument.
 		virtual void Invoke(PrismaView view, std::string script, std::function<void(std::string)> callback = nullptr) noexcept = 0;
 
 		// Register JavaScript listener for view. Receives one argument in a callback.
