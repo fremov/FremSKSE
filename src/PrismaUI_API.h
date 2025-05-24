@@ -40,17 +40,22 @@ namespace PRISMA_UI_API
 		virtual bool HasFocus(PrismaView view) noexcept = 0;
 
 		// Focus view (show cursor and open FocusMenu as Skyrim Menu).
-		virtual bool Focus(PrismaView view) noexcept = 0;
+		virtual bool Focus(PrismaView view, bool pauseGame = false) noexcept = 0;
 
 		// Unfocus view (hide cursor and disable FocusMenu).
 		virtual void Unfocus(PrismaView view) noexcept = 0;
 
+		// Get scrolling distance in pixels.
+		virtual int GetScrollingPixelSize(PrismaView view) noexcept = 0;
+
+		// Set scrolling size in pixels. DEFAULT: 28
+		virtual void SetScrollingPixelSize(PrismaView view, int pixelSize) noexcept = 0;
+
 		// Returns true if view exists.
 		virtual bool IsValid(PrismaView view) noexcept = 0;
 
-		// Will be available in a future API versions.
 		// Totally remove view from memory and unfocus it.
-		// virtual void Destroy(PrismaView view) noexcept = 0;
+		virtual void Destroy(PrismaView view) noexcept = 0;
 	};
 
 	typedef void* (*_RequestPluginAPI)(const InterfaceVersion interfaceVersion);
