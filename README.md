@@ -21,7 +21,6 @@ xmake build
 > ***Note:*** *This will generate a `build/windows/` directory in the **project's root directory** with the build output.*
 
 - Move `view/index.html` to your plugin folder in `<YourPluginName>/PrismaUI/views/PrismaUI-Example-UI/index.html`.
-- Don't forget to synchronize your html view path in `main.cpp` at `PrismaUI->CreateView` line.
 
 ### Project Generation for Visual Studio
 If you want to generate a Visual Studio project, run the following command:
