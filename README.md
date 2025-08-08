@@ -18,12 +18,12 @@ To build the project, run the following command:
 ```bat
 xmake build
 ```
-
-> Don't forget to move `view/index.html` to your plugin folder in `PrismaUI/views/PrismaUI-Example-UI/index.html`.
-
 > ***Note:*** *This will generate a `build/windows/` directory in the **project's root directory** with the build output.*
 
-### Project Generation (Optional)
+- Move `view/index.html` to your plugin folder in `<YourPluginName>/PrismaUI/views/PrismaUI-Example-UI/index.html`.
+- Don't forget to synchronize your html view path in `main.cpp` at `PrismaUI->CreateView` line.
+
+### Project Generation for Visual Studio
 If you want to generate a Visual Studio project, run the following command:
 ```bat
 xmake project -k vsxmake
@@ -31,7 +31,7 @@ xmake project -k vsxmake
 
 > ***Note:*** *This will generate a `vsxmakeXXXX/` directory in the **project's root directory** using the latest version of Visual Studio installed on the system.*
 
-### Upgrading Packages (Optional)
+### Upgrading Packages
 If you want to upgrade the project's dependencies, run the following commands:
 ```bat
 xmake repo --update
