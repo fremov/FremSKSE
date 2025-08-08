@@ -19,7 +19,7 @@ To build the project, run the following command:
 xmake build
 ```
 
-> Don't forget to move `view/index.html` to your plugin folder in `PrismaUI/PrismaUI-Example-UI/index.html`.
+> Don't forget to move `view/index.html` to your plugin folder in `PrismaUI/views/PrismaUI-Example-UI/index.html`.
 
 > ***Note:*** *This will generate a `build/windows/` directory in the **project's root directory** with the build output.*
 
