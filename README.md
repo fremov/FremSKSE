@@ -14,7 +14,7 @@ git clone --recurse-submodules https://github.com/PrismaUI-SKSE/PrismaUI-Example
 ```
 
 ### Build
-To build the project, run the following command:
+- To build the project, run the following command:
 ```bat
 xmake build
 ```
