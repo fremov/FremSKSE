@@ -1,4 +1,4 @@
-#include "PrismaUI_API.h"
+﻿#include "PrismaUI_API.h"
 #include <keyhandler/keyhandler.h>
 
 PRISMA_UI_API::IVPrismaUI1* PrismaUI;
@@ -16,22 +16,22 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message)
             logger::info("View DOM is ready {}", view);
 
             PrismaUI->Invoke(view, "updateFocusLabel('No. But press F3 to focus!')");
-        });
+            });
 
         // 3. Also you could to register JS listener to handling JS methods calls.
-        PrismaUI->RegisterJSListener(view, "sendDataToSKSE", [](std::string data) -> void {
+        PrismaUI->RegisterJSListener(view, "sendDataToSKSE", [](const char* data) -> void {
             logger::info("Received data from JS: {}", data);
-        });
+            });
 
         // Next lines is custom KEY DOWN / KEY UP realisation which bases at "src/keyhandler".
         KeyHandler::RegisterSink();
         KeyHandler* keyHandler = KeyHandler::GetSingleton();
         const uint32_t TOGGLE_FOCUS_KEY = 0x3D; // F3 key
-        
+
         // Press F3 to focus/unfocus view in-game.
         KeyHandlerEvent toggleEventHandler = keyHandler->Register(TOGGLE_FOCUS_KEY, KeyEventType::KEY_DOWN, [view]() {
             auto hasFocus = PrismaUI->HasFocus(view);
-            
+
             if (!hasFocus) {
                 // Focus
                 if (PrismaUI->Focus(view)) {
@@ -43,7 +43,7 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message)
                 PrismaUI->Unfocus(view);
                 PrismaUI->Invoke(view, "updateFocusLabel('Nah, it is not focused.')");
             }
-        });
+            });
 
         // If you want to unregister the key event handlers:
         // keyHandler->Unregister(toggleEventHandler);
@@ -61,8 +61,6 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_s
         logger::critical("Failed to load messaging interface! This error is fatal, plugin will not load.");
         return false;
     }
-
-    logger::info("{} v{}"sv, Plugin::NAME, Plugin::VERSION.string());
 
     SKSE::Init(a_skse);
     SKSE::AllocTrampoline(1 << 10);
