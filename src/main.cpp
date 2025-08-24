@@ -1,71 +1,73 @@
-﻿#include "PrismaUI_API.h"
-#include <keyhandler/keyhandler.h>
+﻿#include "SKSE/API.h"
+#include "InputHandler.h"
+#include "HUDManager.h"
+#include "Utils.h"
+#include "pch.h"
+#include "SkillWidget.h"
+#include "MenuHandler.h"
 
-PRISMA_UI_API::IVPrismaUI1* PrismaUI;
+// Объявление внешних переменных
+PRISMA_UI_API::IVPrismaUI1* PrismaUI = nullptr;
+PrismaView view = 0;  // Единственное определение глобальной переменной
 
-static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message)
-{
+static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
+    using namespace SKSE;
+    using namespace RE;
+
     switch (message->type) {
-    case SKSE::MessagingInterface::kDataLoaded:
-        // 1. Initialize PrismaUI API
-        PrismaUI = static_cast<PRISMA_UI_API::IVPrismaUI1*>(PRISMA_UI_API::RequestPluginAPI(PRISMA_UI_API::InterfaceVersion::V1));
+    case MessagingInterface::kPostLoad:
+        // Инициализируем PrismaUI API
+        PrismaUI = static_cast<PRISMA_UI_API::IVPrismaUI1*>(
+            PRISMA_UI_API::RequestPluginAPI(PRISMA_UI_API::InterfaceVersion::V1)
+            );
 
-        // 2. Create view and call "Invoke" method to send JavaScript code to view when DOM is ready.
-        PrismaView view = PrismaUI->CreateView("FremUI/index.html", [](PrismaView view) -> void {
-            // View DOM is ready then you can use Invoke here (make sure that your JS methods are available after DOM is ready).
-            logger::info("View DOM is ready {}", view);
+        if (!PrismaUI) {
+            logger::error("Failed to get PrismaUI API");
+            return;
+        }
+        logger::info("PrismaUI API successfully initialized");
+        break;
 
-            PrismaUI->Invoke(view, "updateFocusLabel('No. But press F3 to focus!')");
-            });
+    case MessagingInterface::kDataLoaded:
+        // Создаем PrismaUI view
+        if (PrismaUI) {
+            view = PrismaUI->CreateView("FremUI/index.html", [](PrismaView view) {
+                logger::info("PrismaUI view created successfully");
 
-        // 3. Also you could to register JS listener to handling JS methods calls.
-        PrismaUI->RegisterJSListener(view, "sendDataToSKSE", [](const char* data) -> void {
-            logger::info("Received data from JS: {}", data);
-            });
+                // Инициализируем все системы после создания view
+                SkillWidget::Initialize();
+                SkillWidget::Start();
 
-        // Next lines is custom KEY DOWN / KEY UP realisation which bases at "src/keyhandler".
-        KeyHandler::RegisterSink();
-        KeyHandler* keyHandler = KeyHandler::GetSingleton();
-        const uint32_t TOGGLE_FOCUS_KEY = 0x3D; // F3 key
+                // Регистрируем обработчики событий
+                Input::InputEventHandler::Register();
+                MenuHandler::register_();
 
-        // Press F3 to focus/unfocus view in-game.
-        KeyHandlerEvent toggleEventHandler = keyHandler->Register(TOGGLE_FOCUS_KEY, KeyEventType::KEY_DOWN, [view]() {
-            auto hasFocus = PrismaUI->HasFocus(view);
+                // Запускаем поток обновления HUD
+                HUDManager::g_running = true;
+                std::thread(HUDManager::UpdateThread).detach();
 
-            if (!hasFocus) {
-                // Focus
-                if (PrismaUI->Focus(view)) {
-                    PrismaUI->Invoke(view, "updateFocusLabel('Yeah, it is focused! Press F3 again to unfocus.')");
-                }
+                logger::info("All systems initialized successfully");
+                });
+
+            if (view == 0) {
+                logger::error("Failed to create PrismaUI view");
             }
-            else {
-                // Unfocus
-                PrismaUI->Unfocus(view);
-                PrismaUI->Invoke(view, "updateFocusLabel('Nah, it is not focused.')");
-            }
-            });
-
-        // If you want to unregister the key event handlers:
-        // keyHandler->Unregister(toggleEventHandler);
+        }
         break;
     }
 }
 
-extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_skse)
-{
-    REL::Module::reset();
+extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_skse) {
+    SKSE::Init(a_skse);
 
-    auto g_messaging = reinterpret_cast<SKSE::MessagingInterface*>(a_skse->QueryInterface(SKSE::LoadInterface::kMessaging));
-
-    if (!g_messaging) {
-        logger::critical("Failed to load messaging interface! This error is fatal, plugin will not load.");
+    auto messaging = SKSE::GetMessagingInterface();
+    if (messaging) {
+        messaging->RegisterListener("SKSE", SKSEMessageHandler);
+    }
+    else {
+        logger::error("Failed to get messaging interface");
         return false;
     }
-
-    SKSE::Init(a_skse);
-    SKSE::AllocTrampoline(1 << 10);
-
-    g_messaging->RegisterListener("SKSE", SKSEMessageHandler);
 
     return true;
 }
