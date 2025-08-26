@@ -6,7 +6,6 @@ namespace HUDManager {
 
     void UpdateCustomBars() {
         auto player = RE::PlayerCharacter::GetSingleton();
-        // ИСПРАВЛЕНО: !PrismaUI->IsValid(view) вместо PrismaUI->IsValid(view)
         if (!player || !PrismaUI || !PrismaUI->IsValid(view)) {
             logger::warn("Cannot update bars: player={}, PrismaUI={}, viewValid={}",
                 player != nullptr, PrismaUI != nullptr,
@@ -22,11 +21,18 @@ namespace HUDManager {
         int maxMp = static_cast<int>(Utils::get_total_av(player, RE::ActorValue::kMagicka));
         int maxSt = static_cast<int>(Utils::get_total_av(player, RE::ActorValue::kStamina));
 
-
         auto regHp = 0.f;
         auto regMp = 0.f;
         auto regSt = 0.f;
 
+        // Получаем зарезервированную ману из глобальных переменных
+        auto data = RE::TESDataHandler::GetSingleton();
+        auto ManaLock = data->LookupForm<RE::TESGlobal>(0x0E9BB1, "STB.esp");
+        float reservedMana = 0.f;
+
+        if (ManaLock) {
+            reservedMana = ManaLock->value;
+        }
 
         for (auto active_effect : *player->AsMagicTarget()->GetActiveEffectList()) {
             if (active_effect->effect->baseEffect->data.primaryAV == RE::ActorValue::kHealth &&
@@ -56,14 +62,14 @@ namespace HUDManager {
             Utils::format_float(regHp, 2) + "," +
             Utils::format_float(regMp, 2) + "," +
             Utils::format_float(regSt, 2) + "," +
+            Utils::format_float(reservedMana, 2) + "," + // Добавляем зарезервированную ману
             "false)";
 
         if (PrismaUI->IsValid(view)) {
             PrismaUI->Invoke(view, script.c_str());
-            logger::debug("Sent stats update: {}", script);
+            logger::info("Sent stats update: {}", script);
         }
     }
-
     void UpdateThread() {
         while (g_running) {
             UpdateCustomBars();

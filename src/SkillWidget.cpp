@@ -1,11 +1,12 @@
-﻿
-//#include "Utils.h"
+﻿#include "Utils.h"
 #include "SKSE/API.h"
 #include <cmath>
 #include <chrono>
 #include "SkillWidget.h"
 #include "PrismaUI_API.h"
-#include "Utils.h"
+#include "json.hpp"
+
+using json = nlohmann::json;
 
 extern PRISMA_UI_API::IVPrismaUI1 * PrismaUI;
 extern PrismaView view;
@@ -46,6 +47,7 @@ namespace SkillWidget
         }
     }
 
+    
     void SkillWidgetManager::UpdateSkills()
     {
         if (!PrismaUI || view == 0) return;
@@ -56,52 +58,71 @@ namespace SkillWidget
             return;
         }
 
-        std::string skillText;
+        json skillDataJson = json::array();
         bool hasChanges = false;
 
         for (int skillIndex = 0; skillIndex < 18; ++skillIndex)
         {
-            SkillData skillData;
-            GetSkillData(skillIndex, skillData);
+            SkillData currentSkillData;
+            GetSkillData(skillIndex, currentSkillData);
 
-            // Проверяем изменения и отправляем данные только если есть изменения
-            if (skillData.level != m_skillLevelOld[skillIndex] ||
-                std::abs(skillData.currentExp - m_previousSkillXP[skillIndex]) > 0.1f)
+            // Проверяем изменения
+            if (currentSkillData.level != m_skillLevelOld[skillIndex] ||
+                std::abs(currentSkillData.currentExp - m_previousSkillXP[skillIndex]) > 0.1f)
             {
                 hasChanges = true;
 
-                // Отправляем данные только для изменившихся навыков
-                std::string skillAll = std::to_string(skillIndex) + "," +
-                    std::to_string(skillData.level) + "," +
-                    std::to_string(static_cast<int>(std::round(skillData.currentExp))) + "," +
-                    std::to_string(static_cast<int>(std::round(skillData.maxExp))) + "," +
-                    std::to_string(static_cast<int>(std::round(skillData.maxExpSplit)));
+                // Рассчитываем анимацию на C++ стороне
+                json skillJson;
+                skillJson["id"] = skillIndex;
+                skillJson["name"] = m_skillNames[skillIndex];
+                skillJson["previousLevel"] = m_skillLevelOld[skillIndex];
+                skillJson["previousExp"] = m_previousSkillXP[skillIndex];
+                skillJson["currentLevel"] = currentSkillData.level;
+                skillJson["currentExp"] = currentSkillData.currentExp;
+                skillJson["gainedExp"] = CalculateGainedExperience(skillIndex, currentSkillData.level, currentSkillData.currentExp);
 
-                if (skillText.empty())
+                // Рассчитываем пороги опыта для каждого уровня
+                std::vector<float> levelThresholds;
+                int startLevel = m_skillLevelOld[skillIndex];
+                int targetLevel = currentSkillData.level;
+                float startExp = m_previousSkillXP[skillIndex];
+                float targetExp = currentSkillData.currentExp;
+
+                if (targetLevel > startLevel)
                 {
-                    skillText = skillAll;
+                    // Добавляем пороги для всех пройденных уровней
+                    for (int level = startLevel; level <= targetLevel; ++level)
+                    {
+                        float maxExpForLevel = 1.54f * std::pow(static_cast<float>(level), 2.15f) + 154.0f;
+                        levelThresholds.push_back(maxExpForLevel);
+                    }
                 }
                 else
                 {
-                    skillText += "-" + skillAll;
+                    // Только текущий уровень
+                    float maxExpForLevel = 1.54f * std::pow(static_cast<float>(startLevel), 2.15f) + 154.0f;
+                    levelThresholds.push_back(maxExpForLevel);
                 }
 
+                skillJson["levelThresholds"] = levelThresholds;
+                skillDataJson.push_back(skillJson);
+
                 // Обновляем сохраненные значения
-                m_skillLevelOld[skillIndex] = skillData.level;
-                m_previousSkillXP[skillIndex] = skillData.currentExp;
+                m_skillLevelOld[skillIndex] = currentSkillData.level;
+                m_previousSkillXP[skillIndex] = currentSkillData.currentExp;
             }
         }
 
-        // Отправляем данные только если есть изменения
         if (hasChanges)
         {
-            std::string script = "updateSkills('" + skillText + "')";
+            std::string script = "updateSkills('" + skillDataJson.dump() + "')";
             PrismaUI->Invoke(view, script.c_str());
-
-            // Логируем отправленные данные для отладки
             logger::info("Sent skill data: {}", script);
         }
     }
+
+
 
     void SkillWidgetManager::GetSkillData(int skillIndex, SkillData& skillData)
     {

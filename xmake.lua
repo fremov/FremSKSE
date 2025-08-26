@@ -30,14 +30,15 @@ target("FremSKSE")
     add_files("src/InputHandler.cpp") 
     add_files("src/HudManager.cpp")
     add_files("src/Utils.cpp")
-    add_files("src/menuHandler.cpp")
+    add_files("src/MenuHandler.cpp")
 
+    -- ÈÑÏĞÀÂËßÅÌ ÎÏÅ×ÀÒÊÈ Â ÏÓÒßÕ
     add_headerfiles("src/**.h")
-    add_headerfiles("srcSkillWidget.h")
+    add_headerfiles("src/SkillWidget.h")  -- èñïğàâëåíî
     add_headerfiles("src/InputHandler.h")
     add_headerfiles("src/HudManager.h")
     add_headerfiles("src/Utils.h")
-    add_headerfiles("srcMmenuHandler.h")
+    add_headerfiles("src/MenuHandler.h")  -- èñïğàâëåíî
 
     add_includedirs("src")
     set_pcxxheader("src/pch.h")
