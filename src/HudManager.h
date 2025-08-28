@@ -12,5 +12,6 @@ extern PrismaView view;  // Только объявление
 namespace HUDManager {
     void UpdateCustomBars();
     void UpdateThread();
+    float GetExperienceForLevel(int level);
     extern std::atomic<bool> g_running;
 }

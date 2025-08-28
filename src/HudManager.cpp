@@ -4,6 +4,24 @@
 namespace HUDManager {
     std::atomic<bool> g_running = true;
 
+    float GetExperienceForLevel(int level)
+    {
+        // fXPLevelUpMult * level + fXPLevelUpBase
+        auto fXPLevelUpMult = 0.f;
+        auto fXPLevelUpBase = 0.f;
+        const auto settings = RE::GameSettingCollection::GetSingleton();
+        if (settings) {
+            auto levelUpBase = settings->GetSetting("fXPLevelUpBase");
+            if (levelUpBase)
+                fXPLevelUpBase = levelUpBase->GetFloat();
+            auto levelUpMult = settings->GetSetting("fXPLevelUpMult");
+            if (levelUpMult)
+                fXPLevelUpMult = levelUpMult->GetFloat();
+        }
+
+        return fXPLevelUpBase + fXPLevelUpMult * level; // сколько опыта до некст лвла
+    }
+
     void UpdateCustomBars() {
         auto player = RE::PlayerCharacter::GetSingleton();
         if (!player || !PrismaUI || !PrismaUI->IsValid(view)) {
@@ -29,6 +47,11 @@ namespace HUDManager {
         auto data = RE::TESDataHandler::GetSingleton();
         auto ManaLock = data->LookupForm<RE::TESGlobal>(0x0E9BB1, "STB.esp");
         float reservedMana = 0.f;
+
+        auto currentLvl = player->GetLevel(); // текуущий лвл
+        auto currentExp = data->LookupForm<RE::TESGlobal>(0x015BA5, "STB.esp"); // текущий опыт
+        auto nextLvlExp = GetExperienceForLevel(currentLvl);
+
 
         if (ManaLock) {
             reservedMana = ManaLock->value;
@@ -65,9 +88,18 @@ namespace HUDManager {
             Utils::format_float(reservedMana, 2) + "," + // Добавляем зарезервированную ману
             "false)";
 
+        std::string expScript = "updateExperienceData(" +
+            std::to_string(currentLvl) + "," +
+            std::to_string(currentExp->value) + "," +
+            std::to_string(nextLvlExp) + ")";
+
         if (PrismaUI->IsValid(view)) {
             PrismaUI->Invoke(view, script.c_str());
+            PrismaUI->Invoke(view, expScript.c_str());
             logger::info("Sent stats update: {}", script);
+            /*logger::info("Sent experience update: Lvl {}, Exp {}, NextLvl {}",
+                currentLvl, currentExp->value, nextLvlExp);*/
+            logger::info("EXScript {}", expScript);
         }
     }
     void UpdateThread() {
