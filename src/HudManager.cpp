@@ -52,7 +52,6 @@ namespace HUDManager {
         auto currentExp = data->LookupForm<RE::TESGlobal>(0x015BA5, "STB.esp"); // текущий опыт
         auto nextLvlExp = GetExperienceForLevel(currentLvl);
 
-
         if (ManaLock) {
             reservedMana = ManaLock->value;
         }
@@ -75,7 +74,8 @@ namespace HUDManager {
             }
         }
 
-        std::string script = "updateStats(" +
+        // Используем новое имя функции updateStatsBars
+        std::string script = "updateStatsBars(" +
             std::to_string(hp) + "," +
             std::to_string(mp) + "," +
             std::to_string(st) + "," +
@@ -88,18 +88,24 @@ namespace HUDManager {
             Utils::format_float(reservedMana, 2) + "," + // Добавляем зарезервированную ману
             "false)";
 
-        std::string expScript = "updateExperienceData(" +
+        std::string circularScript = "updateCircularExperienceData(" +
+            std::to_string(currentLvl) + "," +
+            std::to_string(currentExp->value) + "," +
+            std::to_string(nextLvlExp) + ")";
+
+        // Скрипт для loading виджета
+        std::string loadingScript = "updateLoadingExperienceData(" +
             std::to_string(currentLvl) + "," +
             std::to_string(currentExp->value) + "," +
             std::to_string(nextLvlExp) + ")";
 
         if (PrismaUI->IsValid(view)) {
+            // Отправляем оба скрипта
             PrismaUI->Invoke(view, script.c_str());
-            PrismaUI->Invoke(view, expScript.c_str());
-            logger::info("Sent stats update: {}", script);
-            /*logger::info("Sent experience update: Lvl {}, Exp {}, NextLvl {}",
-                currentLvl, currentExp->value, nextLvlExp);*/
-            logger::info("EXScript {}", expScript);
+            PrismaUI->Invoke(view, circularScript.c_str());
+            PrismaUI->Invoke(view, loadingScript.c_str());
+            logger::info("Sent circular XP update: {}", circularScript);
+            logger::info("Sent loading XP update: {}", loadingScript);
         }
     }
     void UpdateThread() {

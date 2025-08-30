@@ -14,6 +14,7 @@ auto MenuHandler::register_() -> void {
 auto MenuHandler::ProcessEvent(const RE::MenuOpenCloseEvent* event, RE::BSTEventSource<RE::MenuOpenCloseEvent>*) -> RE::BSEventNotifyControl {
     if (event) {
         if (auto ui = RE::UI::GetSingleton()) {
+            bool isLoadingMenu = ui->IsMenuOpen(RE::LoadingMenu::MENU_NAME);
             bool shouldShowHints = !(
                 ui->IsMenuOpen(RE::InventoryMenu::MENU_NAME) ||
                 ui->IsMenuOpen(RE::CraftingMenu::MENU_NAME) ||
@@ -25,7 +26,6 @@ auto MenuHandler::ProcessEvent(const RE::MenuOpenCloseEvent* event, RE::BSTEvent
                 ui->IsMenuOpen(RE::DialogueMenu::MENU_NAME) ||
                 ui->IsMenuOpen(RE::StatsMenu::MENU_NAME) ||
                 ui->IsMenuOpen(RE::MessageBoxMenu::MENU_NAME) ||
-                ui->IsMenuOpen(RE::LoadingMenu::MENU_NAME) ||
                 ui->IsMenuOpen(RE::JournalMenu::MENU_NAME) ||
                 ui->IsMenuOpen(RE::LockpickingMenu::MENU_NAME) ||
                 ui->IsMenuOpen(RE::SleepWaitMenu::MENU_NAME) ||
@@ -37,8 +37,15 @@ auto MenuHandler::ProcessEvent(const RE::MenuOpenCloseEvent* event, RE::BSTEvent
 
             // ”правление видимостью контейнера подсказок
             PrismaUI->Invoke(view, ("toggleHintsContainer(" + std::string(shouldShowHints ? "true" : "false") + ")").c_str());
+
             // ”правление видимостью контейнера полосок HP, MP, ST
             PrismaUI->Invoke(view, ("toggleStatsContainer(" + std::string(shouldShowHints ? "true" : "false") + ")").c_str());
+
+            // ”правление видимостью кругового виджета опыта (скрываем при загрузке)
+            PrismaUI->Invoke(view, ("toggleXpWidget(" + std::string(shouldShowHints && !isLoadingMenu ? "true" : "false") + ")").c_str());
+
+            // ”правление видимостью линейного прогресс-бара опыта при загрузке
+            PrismaUI->Invoke(view, ("toggleLoadingXpBar(" + std::string(isLoadingMenu ? "true" : "false") + ")").c_str());
         }
     }
     return RE::BSEventNotifyControl::kContinue;
