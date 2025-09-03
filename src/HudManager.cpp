@@ -1,28 +1,68 @@
 #include "HUDManager.h"
 #include "Utils.h"
+using namespace RE;
 
 namespace HUDManager {
     std::atomic<bool> g_running = true;
 
-    float GetExperienceForLevel(int level)
-    {
-        // fXPLevelUpMult * level + fXPLevelUpBase
+    float GetExperienceForLevel(int level) {
         auto fXPLevelUpMult = 0.f;
         auto fXPLevelUpBase = 0.f;
         const auto settings = RE::GameSettingCollection::GetSingleton();
+
         if (settings) {
-            auto levelUpBase = settings->GetSetting("fXPLevelUpBase");
-            if (levelUpBase)
+            if (auto levelUpBase = settings->GetSetting("fXPLevelUpBase"))
                 fXPLevelUpBase = levelUpBase->GetFloat();
-            auto levelUpMult = settings->GetSetting("fXPLevelUpMult");
-            if (levelUpMult)
+            if (auto levelUpMult = settings->GetSetting("fXPLevelUpMult"))
                 fXPLevelUpMult = levelUpMult->GetFloat();
         }
 
-        return fXPLevelUpBase + fXPLevelUpMult * level; // сколько опыта до некст лвла
+        return fXPLevelUpBase + fXPLevelUpMult * level;
+    }
+
+    int CheckResist(RE::ActorValue av, RE::Actor* a) {
+        static auto resists = []() -> RE::SpellItem* {
+            if (auto data = RE::TESDataHandler::GetSingleton())
+                return data->LookupForm<RE::SpellItem>(0x0192B9, "STB.esp");
+            return nullptr;
+            }();
+
+        static auto resistsPerk = []() -> RE::BGSPerk* {
+            if (auto data = RE::TESDataHandler::GetSingleton())
+                return data->LookupForm<RE::BGSPerk>(0x019388, "STB.esp");
+            return nullptr;
+            }();
+
+        double DamageResist = pow(0.9f, (a->AsActorValueOwner()->GetActorValue(av) / 100.f));
+
+        if (resists && resistsPerk &&
+            a->HasPerk(resistsPerk) &&
+            DamageResist <= (1.f - (float)resists->effects[0]->effectItem.duration / 100.f))
+        {
+            DamageResist = 1.f - (float)resists->effects[0]->effectItem.duration / 100.f;
+        }
+
+        auto res = (int)((1 - (float)(DamageResist)) * 100);
+
+        if (resistsPerk && a->HasPerk(resistsPerk) && res > a->GetLevel() + 30)
+            res = a->GetLevel() + 30;
+
+        return res;
     }
 
     void UpdateCustomBars() {
+        static auto manaLock = []() -> RE::TESGlobal* {
+            if (auto data = RE::TESDataHandler::GetSingleton())
+                return data->LookupForm<RE::TESGlobal>(0x0E9BB1, "STB.esp");
+            return nullptr;
+            }();
+
+        static auto currentExp = []() -> RE::TESGlobal* {
+            if (auto data = RE::TESDataHandler::GetSingleton())
+                return data->LookupForm<RE::TESGlobal>(0x015BA5, "STB.esp");
+            return nullptr;
+            }();
+
         auto player = RE::PlayerCharacter::GetSingleton();
         if (!player || !PrismaUI || !PrismaUI->IsValid(view)) {
             logger::warn("Cannot update bars: player={}, PrismaUI={}, viewValid={}",
@@ -39,42 +79,56 @@ namespace HUDManager {
         int maxMp = static_cast<int>(Utils::get_total_av(player, RE::ActorValue::kMagicka));
         int maxSt = static_cast<int>(Utils::get_total_av(player, RE::ActorValue::kStamina));
 
-        auto regHp = 0.f;
-        auto regMp = 0.f;
-        auto regSt = 0.f;
-
-        // Получаем зарезервированную ману из глобальных переменных
-        auto data = RE::TESDataHandler::GetSingleton();
-        auto ManaLock = data->LookupForm<RE::TESGlobal>(0x0E9BB1, "STB.esp");
+        float regHp = 0.f;
+        float regMp = 0.f;
+        float regSt = 0.f;
         float reservedMana = 0.f;
 
-        auto currentLvl = player->GetLevel(); // текуущий лвл
-        auto currentExp = data->LookupForm<RE::TESGlobal>(0x015BA5, "STB.esp"); // текущий опыт
-        auto nextLvlExp = GetExperienceForLevel(currentLvl);
-
-        if (ManaLock) {
-            reservedMana = ManaLock->value;
+        if (manaLock) {
+            reservedMana = manaLock->value;
         }
 
+        auto currentLvl = player->GetLevel();
+        auto nextLvlExp = GetExperienceForLevel(currentLvl);
+
+        auto fireRes = CheckResist(RE::ActorValue::kResistFire, player);
+        auto frosteRes = CheckResist(RE::ActorValue::kResistFrost, player);
+        auto shockRes = CheckResist(RE::ActorValue::kResistShock, player);
+        auto chaosRes = CheckResist(RE::ActorValue::kPoisonResist, player);
+        auto damageRes = CheckResist(RE::ActorValue::kDamageResist, player);;
+
+        logger::info("FireRes {}", fireRes);
+        logger::info("frosteRes {}", frosteRes);
+        logger::info("shockRes {}", shockRes);
+        logger::info("chaosRes {}", chaosRes);
+        logger::info("damageRes {}", damageRes);
+
+        /*auto intox = TESForm::LookupByEditorID<TESGlobal>("aaMZgv_Potion_Intoxication");
+        auto intoxLock = TESForm::LookupByEditorID<TESGlobal>("aaMZgv_Potion_IntoxicationLocked");
+        logger::info("Intox {}", intox);
+        logger::info("IntoxLock {}", intoxLock);*/
+
         for (auto active_effect : *player->AsMagicTarget()->GetActiveEffectList()) {
-            if (active_effect->effect->baseEffect->data.primaryAV == RE::ActorValue::kHealth &&
-                !active_effect->flags.any(RE::ActiveEffect::Flag::kInactive) &&
-                active_effect->effect->baseEffect->HasKeywordString("aaMZkw_RestoreHealthRace")) {
+            if (!active_effect || active_effect->flags.any(RE::ActiveEffect::Flag::kInactive))
+                continue;
+
+            auto baseEffect = active_effect->effect->baseEffect;
+            if (!baseEffect) continue;
+
+            if (baseEffect->data.primaryAV == RE::ActorValue::kHealth &&
+                baseEffect->HasKeywordString("aaMZkw_RestoreHealthRace")) {
                 regHp += active_effect->magnitude;
             }
-            else if (active_effect->effect->baseEffect->data.primaryAV == RE::ActorValue::kMagicka &&
-                !active_effect->flags.any(RE::ActiveEffect::Flag::kInactive) &&
-                active_effect->effect->baseEffect->HasKeywordString("aaMZkw_RestoreMagickaRace")) {
+            else if (baseEffect->data.primaryAV == RE::ActorValue::kMagicka &&
+                baseEffect->HasKeywordString("aaMZkw_RestoreMagickaRace")) {
                 regMp += active_effect->magnitude;
             }
-            else if (active_effect->effect->baseEffect->data.primaryAV == RE::ActorValue::kStamina &&
-                !active_effect->flags.any(RE::ActiveEffect::Flag::kInactive) &&
-                active_effect->effect->baseEffect->HasKeywordString("aaMZkw_RestoreStaminaRace")) {
+            else if (baseEffect->data.primaryAV == RE::ActorValue::kStamina &&
+                baseEffect->HasKeywordString("aaMZkw_RestoreStaminaRace")) {
                 regSt += active_effect->magnitude;
             }
         }
 
-        // Используем новое имя функции updateStatsBars
         std::string script = "updateStatsBars(" +
             std::to_string(hp) + "," +
             std::to_string(mp) + "," +
@@ -85,29 +139,26 @@ namespace HUDManager {
             Utils::format_float(regHp, 2) + "," +
             Utils::format_float(regMp, 2) + "," +
             Utils::format_float(regSt, 2) + "," +
-            Utils::format_float(reservedMana, 2) + "," + // Добавляем зарезервированную ману
+            Utils::format_float(reservedMana, 2) + "," +
             "false)";
 
         std::string circularScript = "updateCircularExperienceData(" +
             std::to_string(currentLvl) + "," +
-            std::to_string(currentExp->value) + "," +
+            std::to_string(currentExp ? currentExp->value : 0) + "," +
             std::to_string(nextLvlExp) + ")";
 
-        // Скрипт для loading виджета
         std::string loadingScript = "updateLoadingExperienceData(" +
             std::to_string(currentLvl) + "," +
-            std::to_string(currentExp->value) + "," +
+            std::to_string(currentExp ? currentExp->value : 0) + "," +
             std::to_string(nextLvlExp) + ")";
 
         if (PrismaUI->IsValid(view)) {
-            // Отправляем оба скрипта
             PrismaUI->Invoke(view, script.c_str());
             PrismaUI->Invoke(view, circularScript.c_str());
             PrismaUI->Invoke(view, loadingScript.c_str());
-            logger::info("Sent circular XP update: {}", circularScript);
-            logger::info("Sent loading XP update: {}", loadingScript);
         }
     }
+
     void UpdateThread() {
         while (g_running) {
             UpdateCustomBars();
