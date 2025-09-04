@@ -92,13 +92,13 @@ namespace HUDManager {
         auto nextLvlExp = GetExperienceForLevel(currentLvl);
 
         auto fireRes = CheckResist(RE::ActorValue::kResistFire, player);
-        auto frosteRes = CheckResist(RE::ActorValue::kResistFrost, player);
+        auto frostRes = CheckResist(RE::ActorValue::kResistFrost, player);
         auto shockRes = CheckResist(RE::ActorValue::kResistShock, player);
         auto chaosRes = CheckResist(RE::ActorValue::kPoisonResist, player);
-        auto damageRes = CheckResist(RE::ActorValue::kDamageResist, player);;
+        auto damageRes = CheckResist(RE::ActorValue::kDamageResist, player);
 
         logger::info("FireRes {}", fireRes);
-        logger::info("frosteRes {}", frosteRes);
+        logger::info("frosteRes {}", frostRes);
         logger::info("shockRes {}", shockRes);
         logger::info("chaosRes {}", chaosRes);
         logger::info("damageRes {}", damageRes);
@@ -152,10 +152,19 @@ namespace HUDManager {
             std::to_string(currentExp ? currentExp->value : 0) + "," +
             std::to_string(nextLvlExp) + ")";
 
+        std::string resistancesScript = "updateResistancesData(["
+            "{type:'fire', value:" + std::to_string(fireRes) + ", icon:'\\uD83D\\uDD25'},"
+            "{type:'frost', value:" + std::to_string(frostRes) + ", icon:'\\u2744\\uFE0F'},"
+            "{type:'shock', value:" + std::to_string(shockRes) + ", icon:'\\u26A1\\uFE0F'},"
+            "{type:'chaos', value:" + std::to_string(chaosRes) + ", icon:'\\u2620\\uFE0F'},"
+            "{type:'physical', value:" + std::to_string(damageRes) + ", icon:'\\uD83D\\uDEE1\\uFE0F'}"
+            "])";
+
         if (PrismaUI->IsValid(view)) {
             PrismaUI->Invoke(view, script.c_str());
             PrismaUI->Invoke(view, circularScript.c_str());
             PrismaUI->Invoke(view, loadingScript.c_str());
+            PrismaUI->Invoke(view, resistancesScript.c_str());
         }
     }
 

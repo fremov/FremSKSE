@@ -46,6 +46,9 @@ auto MenuHandler::ProcessEvent(const RE::MenuOpenCloseEvent* event, RE::BSTEvent
 
             // ”правление видимостью линейного прогресс-бара опыта при загрузке
             PrismaUI->Invoke(view, ("toggleLoadingXpBar(" + std::string(isLoadingMenu ? "true" : "false") + ")").c_str());
+
+            // ”правление видимостью резистов
+            PrismaUI->Invoke(view, ("toggleResistancesContainer(" + std::string(shouldShowHints ? "true" : "false") + ")").c_str());
         }
     }
     return RE::BSEventNotifyControl::kContinue;
