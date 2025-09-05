@@ -1,4 +1,4 @@
-#include "HUDManager.h"
+﻿#include "HUDManager.h"
 #include "Utils.h"
 using namespace RE;
 
@@ -97,11 +97,11 @@ namespace HUDManager {
         auto chaosRes = CheckResist(RE::ActorValue::kPoisonResist, player);
         auto damageRes = CheckResist(RE::ActorValue::kDamageResist, player);
 
-        logger::info("FireRes {}", fireRes);
+        /*logger::info("FireRes {}", fireRes);
         logger::info("frosteRes {}", frostRes);
         logger::info("shockRes {}", shockRes);
         logger::info("chaosRes {}", chaosRes);
-        logger::info("damageRes {}", damageRes);
+        logger::info("damageRes {}", damageRes);*/
 
         /*auto intox = TESForm::LookupByEditorID<TESGlobal>("aaMZgv_Potion_Intoxication");
         auto intoxLock = TESForm::LookupByEditorID<TESGlobal>("aaMZgv_Potion_IntoxicationLocked");
@@ -153,11 +153,11 @@ namespace HUDManager {
             std::to_string(nextLvlExp) + ")";
 
         std::string resistancesScript = "updateResistancesData(["
-            "{type:'fire', value:" + std::to_string(fireRes) + ", icon:'\\uD83D\\uDD25'},"
-            "{type:'frost', value:" + std::to_string(frostRes) + ", icon:'\\u2744\\uFE0F'},"
-            "{type:'shock', value:" + std::to_string(shockRes) + ", icon:'\\u26A1\\uFE0F'},"
-            "{type:'chaos', value:" + std::to_string(chaosRes) + ", icon:'\\u2620\\uFE0F'},"
-            "{type:'physical', value:" + std::to_string(damageRes) + ", icon:'\\uD83D\\uDEE1\\uFE0F'}"
+            "{type:'fire', value:" + std::to_string(fireRes) + "},"
+            "{type:'frost', value:" + std::to_string(frostRes) + "},"
+            "{type:'shock', value:" + std::to_string(shockRes) + "},"
+            "{type:'chaos', value:" + std::to_string(chaosRes) + "},"
+            "{type:'physical', value:" + std::to_string(damageRes) + "}"
             "])";
 
         if (PrismaUI->IsValid(view)) {

@@ -10,6 +10,58 @@
 PRISMA_UI_API::IVPrismaUI1* PrismaUI = nullptr;
 PrismaView view = 0;  // Единственное определение глобальной переменной
 
+class OnWeaponHit
+{
+public:
+    static void Hook()
+    {
+        _weapon_hit = SKSE::GetTrampoline().write_call<5>(REL::ID(37673).address() + 0x3C0, weapon_hit);
+    }
+
+private:
+    static void weapon_hit(RE::Actor* target, RE::HitData& hit_data)
+    {
+        logger::info("name: {}", target->GetName());
+        logger::info("name: {}", target->GetLevel());
+        logger::info("damage: {}", hit_data.totalDamage);
+        return  _weapon_hit(target, hit_data);;
+    }
+
+    static inline REL::Relocation<decltype(weapon_hit)> _weapon_hit;
+};
+
+//class OnEquip
+//{
+//public:
+//    static void Hook()
+//    {
+//        _foo =
+//            SKSE::GetTrampoline().write_call<5>(REL::ID(37938).address() + 0xE5,
+//                foo);
+//    }
+//
+//private:
+//    static void foo(RE::ActorEquipManager* equip_manager,
+//        RE::Actor* actor,
+//        RE::TESBoundObject* bound_object,
+//        void* extra_data_list)
+//    {
+//
+//        if (!equip_manager || !actor || !bound_object || !extra_data_list) {
+//            return _foo(equip_manager, actor, bound_object, extra_data_list);
+//        }
+//        if (bound_object->GetFormType() == RE::FormType::AlchemyItem) {
+//            RE::DebugMessageBox("KvazarSOSI");
+//            logger::info("effects {}", bound_object->As<RE::AlchemyItem>()->effects[0]);
+//            logger::info("effects {}", bound_object->As<RE::AlchemyItem>()->boundData);
+//        }
+//        return _foo(equip_manager, actor, bound_object, extra_data_list);
+//
+//    }
+//
+//    static inline REL::Relocation<decltype(foo)> _foo;
+//};
+
 static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
     using namespace SKSE;
     using namespace RE;
@@ -37,7 +89,9 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
                 // Инициализируем все системы после создания view
                 SkillWidget::Initialize();
                 SkillWidget::Start();
-
+                SKSE::GetTrampoline().create(228);
+                OnWeaponHit::Hook();
+                //OnEquip::Hook();
                 // Регистрируем обработчики событий
                 Input::InputEventHandler::Register();
                 MenuHandler::register_();
