@@ -103,10 +103,14 @@ namespace HUDManager {
         logger::info("chaosRes {}", chaosRes);
         logger::info("damageRes {}", damageRes);*/
 
-        /*auto intox = TESForm::LookupByEditorID<TESGlobal>("aaMZgv_Potion_Intoxication");
+        auto intox = TESForm::LookupByEditorID<TESGlobal>("aaMZgv_Potion_Intoxication");
         auto intoxLock = TESForm::LookupByEditorID<TESGlobal>("aaMZgv_Potion_IntoxicationLocked");
-        logger::info("Intox {}", intox);
-        logger::info("IntoxLock {}", intoxLock);*/
+
+        float currentIntox = intox ? intox->value : 0.0f;
+        float lockedIntox = intoxLock ? intoxLock->value : 0.0f;
+        float maxIntox = 100.0f;
+        /*logger::info("Intox {}", intox->value);
+        logger::info("IntoxLock {}", intoxLock->value);*/
 
         for (auto active_effect : *player->AsMagicTarget()->GetActiveEffectList()) {
             if (!active_effect || active_effect->flags.any(RE::ActiveEffect::Flag::kInactive))
@@ -160,11 +164,17 @@ namespace HUDManager {
             "{type:'physical', value:" + std::to_string(damageRes) + "}"
             "])";
 
+        std::string intoxScript = "updateIntoxicationData(" +
+            Utils::format_float(currentIntox, 2) + "," +
+            Utils::format_float(lockedIntox, 2) + "," +
+            Utils::format_float(maxIntox, 2) + ")";
+
         if (PrismaUI->IsValid(view)) {
             PrismaUI->Invoke(view, script.c_str());
             PrismaUI->Invoke(view, circularScript.c_str());
             PrismaUI->Invoke(view, loadingScript.c_str());
             PrismaUI->Invoke(view, resistancesScript.c_str());
+            PrismaUI->Invoke(view, intoxScript.c_str());
         }
     }
 
