@@ -49,6 +49,11 @@ namespace HUDManager {
 
         return res;
     }
+    bool PlayerInCombat()
+    {
+        auto player = RE::PlayerCharacter::GetSingleton();
+        return player && player->IsInCombat();
+    }
 
     void UpdateCustomBars() {
         static auto manaLock = []() -> RE::TESGlobal* {
@@ -106,11 +111,17 @@ namespace HUDManager {
         auto intox = TESForm::LookupByEditorID<TESGlobal>("aaMZgv_Potion_Intoxication");
         auto intoxLock = TESForm::LookupByEditorID<TESGlobal>("aaMZgv_Potion_IntoxicationLocked");
 
-        float currentIntox = intox ? intox->value : 0.0f;
-        float lockedIntox = intoxLock ? intoxLock->value : 0.0f;
-        float maxIntox = 100.0f;
+        int currentIntox = intox->value;
+        int lockedIntox = intoxLock->value;
+        int maxIntox = 999;
         /*logger::info("Intox {}", intox->value);
         logger::info("IntoxLock {}", intoxLock->value);*/
+
+        auto playerSpeed = player->AsActorValueOwner()->GetActorValue(RE::ActorValue::kSpeedMult);
+        //logger::info("speed: {}", playerSpeed);
+
+        auto playerInCombat = PlayerInCombat();
+        //logger::info("combat: {}", playerInCombat);
 
         for (auto active_effect : *player->AsMagicTarget()->GetActiveEffectList()) {
             if (!active_effect || active_effect->flags.any(RE::ActiveEffect::Flag::kInactive))
@@ -149,7 +160,8 @@ namespace HUDManager {
         std::string circularScript = "updateCircularExperienceData(" +
             std::to_string(currentLvl) + "," +
             std::to_string(currentExp ? currentExp->value : 0) + "," +
-            std::to_string(nextLvlExp) + ")";
+            std::to_string(nextLvlExp) + "," +
+            std::to_string(playerInCombat) + ")";
 
         std::string loadingScript = "updateLoadingExperienceData(" +
             std::to_string(currentLvl) + "," +
@@ -161,13 +173,14 @@ namespace HUDManager {
             "{type:'frost', value:" + std::to_string(frostRes) + "},"
             "{type:'shock', value:" + std::to_string(shockRes) + "},"
             "{type:'chaos', value:" + std::to_string(chaosRes) + "},"
-            "{type:'physical', value:" + std::to_string(damageRes) + "}"
+            "{type:'physical', value:" + std::to_string(damageRes) + "},"
+            "{type:'speed', value:" + std::to_string(playerSpeed) + "}"
             "])";
 
         std::string intoxScript = "updateIntoxicationData(" +
-            Utils::format_float(currentIntox, 2) + "," +
-            Utils::format_float(lockedIntox, 2) + "," +
-            Utils::format_float(maxIntox, 2) + ")";
+            std::to_string(currentIntox) + "," +
+            std::to_string(lockedIntox) + "," +
+            std::to_string(maxIntox) + ")";
 
         if (PrismaUI->IsValid(view)) {
             PrismaUI->Invoke(view, script.c_str());

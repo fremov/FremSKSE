@@ -95,6 +95,7 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
                 // Регистрируем обработчики событий
                 Input::InputEventHandler::Register();
                 MenuHandler::register_();
+                SkillWidget::Initialize();
 
                 // Запускаем поток обновления HUD
                 HUDManager::g_running = true;
