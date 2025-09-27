@@ -118,7 +118,7 @@ namespace SkillWidget
         {
             std::string script = "updateSkills('" + skillDataJson.dump() + "')";
             PrismaUI->Invoke(view, script.c_str());
-            logger::info("Sent skill data: {}", script);
+            //logger::info("Sent skill data: {}", script);
         }
     }
 

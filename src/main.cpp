@@ -10,6 +10,44 @@
 PRISMA_UI_API::IVPrismaUI1* PrismaUI = nullptr;
 PrismaView view = 0;  // Единственное определение глобальной переменной
 
+class DamageDisplayManager {
+public:
+    static void ShowDamageNotification(const std::string& attacker, const std::string& target, int damage) {
+        if (!PrismaUI || !PrismaUI->IsValid(view)) {
+            logger::warn("PrismaUI not available for damage display");
+            return;
+        }
+
+        std::string script = "showDamageNotification('" +
+            EscapeString(attacker) + "','" +
+            EscapeString(target) + "'," +
+            std::to_string(damage) + ")";
+
+        PrismaUI->Invoke(view, script.c_str());
+
+        logger::info("Damage notification: {} -> {} ({} damage)", attacker, target, damage);
+    }
+
+    static void HideDamageNotification() {
+        if (!PrismaUI || !PrismaUI->IsValid(view)) {
+            return;
+        }
+
+        PrismaUI->Invoke(view, "hideDamageNotification()");
+    }
+
+private:
+    static std::string EscapeString(const std::string& input) {
+        std::string result;
+        for (char c : input) {
+            if (c == '\'') result += "\\'";
+            else if (c == '\\') result += "\\\\";
+            else result += c;
+        }
+        return result;
+    }
+};
+
 class OnWeaponHit
 {
 public:
@@ -19,16 +57,26 @@ public:
     }
 
 private:
-    static void weapon_hit(RE::Actor* target, RE::HitData& hit_data)
-    {
-        logger::info("name: {}", target->GetName());
-        logger::info("name: {}", target->GetLevel());
-        logger::info("damage: {}", hit_data.totalDamage);
-        return  _weapon_hit(target, hit_data);;
+    static void weapon_hit(RE::Actor* target, RE::HitData& hit_data) {
+        // Проверяем, что цель жива и удар актуален
+        if (hit_data.aggressor && target &&
+            !target->IsDead() && // Цель должна быть жива
+            (target->IsPlayerRef() || hit_data.aggressor.get()->IsPlayerRef())) {
+
+            std::string attackerName = hit_data.aggressor.get()->GetDisplayFullName();
+            std::string targetName = target->GetDisplayFullName();
+            int damage = static_cast<int>(hit_data.totalDamage);
+
+            // Отправляем только базовые данные
+            DamageDisplayManager::ShowDamageNotification(attackerName, targetName, damage);
+        }
+        return _weapon_hit(target, hit_data);
     }
 
     static inline REL::Relocation<decltype(weapon_hit)> _weapon_hit;
 };
+
+
 
 //class OnEquip
 //{
@@ -61,6 +109,8 @@ private:
 //
 //    static inline REL::Relocation<decltype(foo)> _foo;
 //};
+
+
 
 static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
     using namespace SKSE;
@@ -103,7 +153,6 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
 
                 logger::info("All systems initialized successfully");
                 });
-
             if (view == 0) {
                 logger::error("Failed to create PrismaUI view");
             }

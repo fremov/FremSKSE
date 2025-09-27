@@ -52,6 +52,9 @@ auto MenuHandler::ProcessEvent(const RE::MenuOpenCloseEvent* event, RE::BSTEvent
 
             // ”правление видимостью интоксикации
             PrismaUI->Invoke(view, ("toggleIntoxicationContainer(" + std::string(shouldShowHints ? "true" : "false") + ")").c_str());
+
+            // ”правление видимостью виджета отображени€ урона
+            PrismaUI->Invoke(view, ("toggleDamageContainer(" + std::string(shouldShowHints ? "true" : "false") + ")").c_str());
         }
     }
     return RE::BSEventNotifyControl::kContinue;
