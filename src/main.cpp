@@ -5,35 +5,46 @@
 #include "pch.h"
 #include "SkillWidget.h"
 #include "MenuHandler.h"
+#include <keyhandler/keyhandler.h>
 
 // Объявление внешних переменных
 PRISMA_UI_API::IVPrismaUI1* PrismaUI = nullptr;
 PrismaView view = 0;  // Единственное определение глобальной переменной
 
-class DamageDisplayManager {
+class DamageLogManager {
 public:
-    static void ShowDamageNotification(const std::string& attacker, const std::string& target, int damage) {
+    static void AddDamageEntry(const std::string& attacker, const std::string& target, int damage) {
         if (!PrismaUI || !PrismaUI->IsValid(view)) {
-            logger::warn("PrismaUI not available for damage display");
+            logger::warn("PrismaUI not available for damage log");
             return;
         }
 
-        std::string script = "showDamageNotification('" +
+        std::string script = "addDamageEntry('" +
             EscapeString(attacker) + "','" +
             EscapeString(target) + "'," +
             std::to_string(damage) + ")";
 
         PrismaUI->Invoke(view, script.c_str());
 
-        logger::info("Damage notification: {} -> {} ({} damage)", attacker, target, damage);
+        logger::info("Damage log entry: {} -> {} ({} damage)", attacker, target, damage);
     }
 
-    static void HideDamageNotification() {
+    static void OpenDamageLog() {
         if (!PrismaUI || !PrismaUI->IsValid(view)) {
             return;
         }
 
-        PrismaUI->Invoke(view, "hideDamageNotification()");
+        PrismaUI->Invoke(view, "openDamageLog()");
+        logger::info("Damage log opened");
+    }
+
+    static void CloseDamageLog() {
+        if (!PrismaUI || !PrismaUI->IsValid(view)) {
+            return;
+        }
+
+        PrismaUI->Invoke(view, "closeDamageLog()");
+        logger::info("Damage log closed");
     }
 
 private:
@@ -67,16 +78,14 @@ private:
             std::string targetName = target->GetDisplayFullName();
             int damage = static_cast<int>(hit_data.totalDamage);
 
-            // Отправляем только базовые данные
-            DamageDisplayManager::ShowDamageNotification(attackerName, targetName, damage);
+            // Отправляем данные в лог урона
+            DamageLogManager::AddDamageEntry(attackerName, targetName, damage);
         }
         return _weapon_hit(target, hit_data);
     }
 
     static inline REL::Relocation<decltype(weapon_hit)> _weapon_hit;
 };
-
-
 
 //class OnEquip
 //{
@@ -110,8 +119,6 @@ private:
 //    static inline REL::Relocation<decltype(foo)> _foo;
 //};
 
-
-
 static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
     using namespace SKSE;
     using namespace RE;
@@ -142,10 +149,37 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
                 SKSE::GetTrampoline().create(228);
                 OnWeaponHit::Hook();
                 //OnEquip::Hook();
+
                 // Регистрируем обработчики событий
                 Input::InputEventHandler::Register();
                 MenuHandler::register_();
                 SkillWidget::Initialize();
+
+                // Регистрируем обработчик клавиши F3 для управления логом урона
+                KeyHandler::RegisterSink();
+                KeyHandler* keyHandler = KeyHandler::GetSingleton();
+                const uint32_t TOGGLE_FOCUS_KEY = 0x3D; // F3 key
+
+                KeyHandlerEvent toggleEventHandler = keyHandler->Register(TOGGLE_FOCUS_KEY, KeyEventType::KEY_DOWN, [view]() {
+                    auto hasFocus = PrismaUI->HasFocus(view);
+
+                    if (!hasFocus) {
+                        // Фокусируемся и открываем лог
+                        if (PrismaUI->Focus(view)) {
+                            DamageLogManager::OpenDamageLog();
+                            logger::info("View focused and damage log opened");
+                        }
+                        else {
+                            logger::error("Failed to focus view");
+                        }
+                    }
+                    else {
+                        // Снимаем фокус и закрываем лог
+                        PrismaUI->Unfocus(view);
+                        DamageLogManager::CloseDamageLog();
+                        logger::info("View unfocused and damage log closed");
+                    }
+                    });
 
                 // Запускаем поток обновления HUD
                 HUDManager::g_running = true;
@@ -153,6 +187,7 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
 
                 logger::info("All systems initialized successfully");
                 });
+
             if (view == 0) {
                 logger::error("Failed to create PrismaUI view");
             }
