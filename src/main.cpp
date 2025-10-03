@@ -47,6 +47,22 @@ public:
         logger::info("Damage log closed");
     }
 
+    // Функция для запуска таймера и снятия фокуса
+    static void StartTimer() {
+        if (!PrismaUI || !PrismaUI->IsValid(view)) {
+            return;
+        }
+
+        // Закрываем лог и снимаем фокус
+        CloseDamageLog();
+        PrismaUI->Unfocus(view);
+
+        // Запускаем таймер в React компоненте
+        PrismaUI->Invoke(view, "startTimer()");
+
+        logger::info("Timer started, log closed and view unfocused");
+    }
+
 private:
     static std::string EscapeString(const std::string& input) {
         std::string result;
@@ -69,10 +85,10 @@ public:
 
 private:
     static void weapon_hit(RE::Actor* target, RE::HitData& hit_data) {
-        // Проверяем, что цель жива и удар актуален
+        // Проверяем, что атакующий - игрок, цель жива и удар актуален
         if (hit_data.aggressor && target &&
             !target->IsDead() && // Цель должна быть жива
-            (target->IsPlayerRef() || hit_data.aggressor.get()->IsPlayerRef())) {
+            hit_data.aggressor.get()->IsPlayerRef()) { // Атакующий должен быть игроком
 
             std::string attackerName = hit_data.aggressor.get()->GetDisplayFullName();
             std::string targetName = target->GetDisplayFullName();
@@ -86,38 +102,6 @@ private:
 
     static inline REL::Relocation<decltype(weapon_hit)> _weapon_hit;
 };
-
-//class OnEquip
-//{
-//public:
-//    static void Hook()
-//    {
-//        _foo =
-//            SKSE::GetTrampoline().write_call<5>(REL::ID(37938).address() + 0xE5,
-//                foo);
-//    }
-//
-//private:
-//    static void foo(RE::ActorEquipManager* equip_manager,
-//        RE::Actor* actor,
-//        RE::TESBoundObject* bound_object,
-//        void* extra_data_list)
-//    {
-//
-//        if (!equip_manager || !actor || !bound_object || !extra_data_list) {
-//            return _foo(equip_manager, actor, bound_object, extra_data_list);
-//        }
-//        if (bound_object->GetFormType() == RE::FormType::AlchemyItem) {
-//            RE::DebugMessageBox("KvazarSOSI");
-//            logger::info("effects {}", bound_object->As<RE::AlchemyItem>()->effects[0]);
-//            logger::info("effects {}", bound_object->As<RE::AlchemyItem>()->boundData);
-//        }
-//        return _foo(equip_manager, actor, bound_object, extra_data_list);
-//
-//    }
-//
-//    static inline REL::Relocation<decltype(foo)> _foo;
-//};
 
 static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
     using namespace SKSE;
@@ -140,7 +124,7 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
     case MessagingInterface::kDataLoaded:
         // Создаем PrismaUI view
         if (PrismaUI) {
-            view = PrismaUI->CreateView("FremUI/index.html", [](PrismaView view) {
+            view = PrismaUI->CreateView("FremUI/index.html", [](PrismaView createdView) {  // Изменил имя параметра
                 logger::info("PrismaUI view created successfully");
 
                 // Инициализируем все системы после создания view
@@ -148,7 +132,6 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
                 SkillWidget::Start();
                 SKSE::GetTrampoline().create(228);
                 OnWeaponHit::Hook();
-                //OnEquip::Hook();
 
                 // Регистрируем обработчики событий
                 Input::InputEventHandler::Register();
@@ -159,8 +142,10 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
                 KeyHandler::RegisterSink();
                 KeyHandler* keyHandler = KeyHandler::GetSingleton();
                 const uint32_t TOGGLE_FOCUS_KEY = 0x3D; // F3 key
+                const uint32_t START_TIMER_KEY = 0x3E; // F4 key для запуска таймера
 
-                KeyHandlerEvent toggleEventHandler = keyHandler->Register(TOGGLE_FOCUS_KEY, KeyEventType::KEY_DOWN, [view]() {
+                // Обработчик F3 - переключение фокуса/лога
+                auto toggleEventHandler = keyHandler->Register(TOGGLE_FOCUS_KEY, KeyEventType::KEY_DOWN, []() {
                     auto hasFocus = PrismaUI->HasFocus(view);
 
                     if (!hasFocus) {
@@ -179,6 +164,11 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
                         DamageLogManager::CloseDamageLog();
                         logger::info("View unfocused and damage log closed");
                     }
+                    });
+
+                // Обработчик F4 - запуск таймера и снятие фокуса
+                auto startTimerHandler = keyHandler->Register(START_TIMER_KEY, KeyEventType::KEY_DOWN, []() {
+                    DamageLogManager::StartTimer();
                     });
 
                 // Запускаем поток обновления HUD
