@@ -8,6 +8,8 @@ RE::ActorValue actorValue;
 std::vector<int> skillsValueCurrentLvl = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
 std::vector <float> skillsValueCurrentExp = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
+
+std::vector<int> skillsValuePreviousLvl = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
 // Функция для округления в меньшую сторону
 int FloorToInt(float value) {
     return static_cast<int>(std::floor(value));
@@ -81,43 +83,34 @@ void ProcessSkillsUpdate(RE::PlayerCharacter* actor)
         float currentLevelFloat = actor->AsActorValueOwner()->GetActorValue(skill);
         int currentLevel = static_cast<int>(currentLevelFloat);
         float currentExperience = GetCurrentSkillExperience(actor, skill);
-
-        // Общий накопленный опыт (для отслеживания прироста)
         float totalExperience = currentExperience;
 
         // Опыт для повышения навыка
         auto skillInfo = RE::ActorValueList::GetSingleton()->GetActorValue(skill);
-        float currentActorValue = actor->AsActorValueOwner()->GetActorValue(skill);
-        float currentExpForLevel = GetExperienceForLevel(skillInfo, static_cast<int>(currentActorValue + 1));
+        float currentExpForLevel = GetExperienceForLevel(skillInfo, static_cast<int>(currentLevelFloat + 1));
 
         // Проверяем изменения
         bool levelChanged = (currentLevel > skillsValueCurrentLvl[i]);
         bool expChanged = (totalExperience > skillsValueCurrentExp[i]);
 
+        // Отправляем только если есть изменения
         if (levelChanged || expChanged) {
-            // Полученный опыт (округляем в меньшую сторону)
+            // Полученный опыт
             int gainedExp = FloorToInt(totalExperience - skillsValueCurrentExp[i]);
-
-            // Текущий опыт (округляем в меньшую сторону)
             int currentExpInt = FloorToInt(currentExperience);
 
             if (levelChanged) {
                 int a = skillsValueCurrentLvl[i];
                 gainedExp = 0;
-                while(a < currentLevel) {
-                    
+                while (a < currentLevel) {
                     a += 1;
                     gainedExp += GetExperienceForLevel(skillInfo, static_cast<int>(a));
-                    logger::info("{} gainedExp: {} lvl {}", skillNames[i], gainedExp, a); // a - уровень навыка
                 }
                 gainedExp -= skillsValueCurrentExp[i];
                 gainedExp += totalExperience;
-
-                logger::info("SKILL LEVEL UP: {} {} -> {}",
-                    skillNames[i], skillsValueCurrentLvl[i], currentLevel);
             }
 
-            // Расчет прогресса в процентах
+            // Расчет прогресса
             float progress = 0.0f;
             if (currentExpForLevel > 0) {
                 progress = (currentExperience / currentExpForLevel) * 100.0f;
@@ -132,43 +125,41 @@ void ProcessSkillsUpdate(RE::PlayerCharacter* actor)
             skillJson += "\"level\":" + std::to_string(currentLevel) + ",";
             skillJson += "\"expForNextLevel\":" + std::to_string(FloorToInt(currentExpForLevel)) + ",";
             skillJson += "\"progress\":" + std::to_string(progress);
+
+            // Добавляем предыдущий уровень для анимации
+            if (levelChanged) {
+                skillJson += ",\"previousLevel\":" + std::to_string(skillsValueCurrentLvl[i]);
+            }
+
             skillJson += "}";
 
             skillsToSend.push_back(skillJson);
 
-            // Вывод в требуемом формате
-            logger::info("{}: current exp {}, gained {}, level {} currentExpForLevel {}",
-                skillNames[i],
-                currentExpInt,     // текущий опыт в текущем уровне
-                gainedExp,         // получено опыта с последней проверки
-                currentLevel,      // текущий уровень навыка
-                FloorToInt(currentExpForLevel) // опыт для лвл апа навыка
-            );
-
             // Обновляем сохраненные значения
             skillsValueCurrentLvl[i] = currentLevel;
             skillsValueCurrentExp[i] = totalExperience;
-        }
 
-        // Отправляем данные в React компонент
-        if (!skillsToSend.empty()) {
-            std::string script = "fremUpdateSkills([";
-            for (size_t i = 0; i < skillsToSend.size(); i++) {
-                script += skillsToSend[i];
-                if (i < skillsToSend.size() - 1) {
-                    script += ",";
-                }
-            }
-            script += "])";
-
-            // Используем PrismaUI для вызова функции в React
-            if (PrismaUI && PrismaUI->IsValid(view)) {
-                PrismaUI->Invoke(view, script.c_str());
-                logger::info("Sent {} skills data to React component", skillsToSend.size());
-            }
+            logger::info("{}: +{} опыта, уровень {} ({}%)",
+                skillNames[i], gainedExp, currentLevel, progress);
         }
     }
-    
+
+    // Отправляем данные в React компонент только если есть изменения
+    if (!skillsToSend.empty()) {
+        std::string script = "fremUpdateSkills([";
+        for (size_t i = 0; i < skillsToSend.size(); i++) {
+            script += skillsToSend[i];
+            if (i < skillsToSend.size() - 1) {
+                script += ",";
+            }
+        }
+        script += "])";
+
+        if (PrismaUI && PrismaUI->IsValid(view)) {
+            PrismaUI->Invoke(view, script.c_str());
+            logger::info("Отправлено {} измененных навыков", skillsToSend.size());
+        }
+    }
 }
 
 class PlayerUpdate
