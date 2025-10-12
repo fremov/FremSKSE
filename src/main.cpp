@@ -5,8 +5,8 @@
 
 float timeUpdateSkills;
 RE::ActorValue actorValue;
-int skillsValueCurrentLvl[] = { 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 };
-float skillsValueCurrentExp[] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
+std::vector<int> skillsValueCurrentLvl = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+std::vector <float> skillsValueCurrentExp = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 // Функция для округления в меньшую сторону
 int FloorToInt(float value) {
@@ -72,6 +72,8 @@ void ProcessSkillsUpdate(RE::PlayerCharacter* actor)
         "Enchanting", "Speech", "Smithing"
     };
 
+    std::vector<std::string> skillsToSend;
+
     for (int i = 0; i < 18; i++) {
         auto skill = skillCount[i];
 
@@ -115,6 +117,25 @@ void ProcessSkillsUpdate(RE::PlayerCharacter* actor)
                     skillNames[i], skillsValueCurrentLvl[i], currentLevel);
             }
 
+            // Расчет прогресса в процентах
+            float progress = 0.0f;
+            if (currentExpForLevel > 0) {
+                progress = (currentExperience / currentExpForLevel) * 100.0f;
+                progress = min(progress, 100.0f);
+            }
+
+            // Формируем JSON для отправки в React
+            std::string skillJson = "{";
+            skillJson += "\"name\":\"" + std::string(skillNames[i]) + "\",";
+            skillJson += "\"currentExp\":" + std::to_string(currentExpInt) + ",";
+            skillJson += "\"gainedExp\":" + std::to_string(gainedExp) + ",";
+            skillJson += "\"level\":" + std::to_string(currentLevel) + ",";
+            skillJson += "\"expForNextLevel\":" + std::to_string(FloorToInt(currentExpForLevel)) + ",";
+            skillJson += "\"progress\":" + std::to_string(progress);
+            skillJson += "}";
+
+            skillsToSend.push_back(skillJson);
+
             // Вывод в требуемом формате
             logger::info("{}: current exp {}, gained {}, level {} currentExpForLevel {}",
                 skillNames[i],
@@ -128,9 +149,28 @@ void ProcessSkillsUpdate(RE::PlayerCharacter* actor)
             skillsValueCurrentLvl[i] = currentLevel;
             skillsValueCurrentExp[i] = totalExperience;
         }
+
+        // Отправляем данные в React компонент
+        if (!skillsToSend.empty()) {
+            std::string script = "fremUpdateSkills([";
+            for (size_t i = 0; i < skillsToSend.size(); i++) {
+                script += skillsToSend[i];
+                if (i < skillsToSend.size() - 1) {
+                    script += ",";
+                }
+            }
+            script += "])";
+
+            // Используем PrismaUI для вызова функции в React
+            if (PrismaUI && PrismaUI->IsValid(view)) {
+                PrismaUI->Invoke(view, script.c_str());
+                logger::info("Sent {} skills data to React component", skillsToSend.size());
+            }
+        }
     }
+    
 }
-// Остальной код без изменений
+
 class PlayerUpdate
 {
 public:
@@ -215,8 +255,71 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
     }
 }
 
+void SaveCallback(SKSE::SerializationInterface* a_intfc)
+{
+    bool ok;
+    ok = a_intfc->WriteRecord('DAT1', 315, (uint32_t)skillsValueCurrentExp.size());
+    assert(ok);
+    bool ok2;
+    ok2 = a_intfc->WriteRecord('DAT2', 315, skillsValueCurrentExp.data(), (uint32_t)skillsValueCurrentExp.size() * sizeof(RE::FormID));
+    assert(ok2);
+    bool ok3;
+    ok3 = a_intfc->WriteRecord('DAT3', 315, (uint32_t)skillsValueCurrentLvl.size());
+    assert(ok3);
+    bool ok4;
+    ok4 = a_intfc->WriteRecord('DAT4', 315, skillsValueCurrentLvl.data(), (uint32_t)skillsValueCurrentLvl.size() * sizeof(RE::FormID));
+    assert(ok4);
+}
+
+void LoadCallback(SKSE::SerializationInterface* a_intfc)
+{
+    bool ok;
+    uint32_t type;
+    uint32_t version;
+    uint32_t length;
+    uint32_t num = 0;
+    while (a_intfc->GetNextRecordInfo(type, version, length)) {
+        assert(version == 315);
+        switch (type) {
+        case 'DAT1':
+            ok = a_intfc->ReadRecordData(num);
+            assert(ok);
+            skillsValueCurrentExp.resize(num);
+            break;
+        case 'DAT2':
+            ok = a_intfc->ReadRecordData(skillsValueCurrentExp.data(), (uint32_t)skillsValueCurrentExp.size() * sizeof(RE::FormID));
+            assert(ok);
+            break;
+        case 'DAT3':
+            ok = a_intfc->ReadRecordData(num);
+            assert(ok);
+            skillsValueCurrentLvl.resize(num);
+            break;
+        case 'DAT4':
+            ok = a_intfc->ReadRecordData(skillsValueCurrentLvl.data(), (uint32_t)skillsValueCurrentLvl.size() * sizeof(RE::FormID));
+            assert(ok);
+            break;
+        default:
+            assert(false);
+            break;
+        }
+    }
+}
+
+void RevertCallback(SKSE::SerializationInterface*)
+{
+    skillsValueCurrentExp.clear();
+    skillsValueCurrentLvl.clear();
+}
+
 extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_skse) {
     SKSE::Init(a_skse);
+
+    auto serialization = SKSE::GetSerializationInterface();
+    serialization->SetUniqueID(0xfa13724);
+    serialization->SetSaveCallback(SaveCallback);
+    serialization->SetLoadCallback(LoadCallback);
+    serialization->SetRevertCallback(RevertCallback);
 
     auto messaging = SKSE::GetMessagingInterface();
     if (messaging) {
