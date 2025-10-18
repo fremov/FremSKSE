@@ -55,6 +55,9 @@ auto MenuHandler::ProcessEvent(const RE::MenuOpenCloseEvent* event, RE::BSTEvent
 
             // ”правление видимостью виджета отображени€ урона
             PrismaUI->Invoke(view, ("toggleDamageContainer(" + std::string(shouldShowHints ? "true" : "false") + ")").c_str());
+
+            // ”правление видимостью полосок навыков 
+            PrismaUI->Invoke(view, ("toggleSkillsContainer(" + std::string(shouldShowHints ? "true" : "false") + ")").c_str());
         }
     }
     return RE::BSEventNotifyControl::kContinue;

@@ -2,14 +2,14 @@
 #include "pch.h"
 #include <cmath>
 #include <algorithm> // Добавляем для std::max
+#include <MenuHandler.h>
 
 float timeUpdateSkills;
 RE::ActorValue actorValue;
 std::vector<int> skillsValueCurrentLvl = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
 std::vector <float> skillsValueCurrentExp = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-
-
 std::vector<int> skillsValuePreviousLvl = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+
 // Функция для округления в меньшую сторону
 int FloorToInt(float value) {
     return static_cast<int>(std::floor(value));
@@ -175,8 +175,9 @@ private:
     static void Update(RE::PlayerCharacter* player, float delta)
     {
         _Update(player, delta);
-        if (timeUpdateSkills >= 3) {
+        if (timeUpdateSkills >= 3 && !(player->IsInCombat())) {
             timeUpdateSkills = 0;
+			//PrismaUI->InteropCall(view, "setSkillsAnimationDuration", "1111");
             ProcessSkillsUpdate(player);
         }
         else {
@@ -228,7 +229,7 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
 
                 //// Регистрируем обработчики событий
                 //Input::InputEventHandler::Register();
-                //MenuHandler::register_();
+                MenuHandler::register_();
                 //SkillWidget::Initialize();
 
                 // Запускаем поток обновления HUD
