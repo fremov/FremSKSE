@@ -238,7 +238,7 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
 
                 logger::info("All systems initialized successfully");
                 });
-
+         TESDataHandler::GetSingleton()->LookupForm<TESGlobal>(0x153E5, "STB.esp")->value = (float)view;
             if (view == 0) {
                 logger::error("Failed to create PrismaUI view");
             }
