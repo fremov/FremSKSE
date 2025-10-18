@@ -1,5 +1,7 @@
 #include "MenuHandler.h"
 
+bool g_shouldShowHints;
+
 auto MenuHandler::get_singleton() noexcept -> MenuHandler* {
     static MenuHandler instance;
     return std::addressof(instance);

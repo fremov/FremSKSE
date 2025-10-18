@@ -5,6 +5,7 @@
 
 extern PRISMA_UI_API::IVPrismaUI1* PrismaUI;
 extern PrismaView view;
+extern bool g_shouldShowHints;  // ќбъ€вление глобальной переменной
 
 struct MenuHandler final : public RE::BSTEventSink<RE::MenuOpenCloseEvent> {
 public:

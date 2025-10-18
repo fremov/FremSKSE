@@ -3,6 +3,8 @@
 #include <cmath>
 #include <algorithm> // Добавляем для std::max
 #include <MenuHandler.h>
+#include "STB_Widgets_API.h"
+#include "MenuHandler.h"
 
 float timeUpdateSkills;
 RE::ActorValue actorValue;
@@ -177,7 +179,11 @@ private:
         _Update(player, delta);
         if (timeUpdateSkills >= 3 && !(player->IsInCombat())) {
             timeUpdateSkills = 0;
-			//PrismaUI->InteropCall(view, "setSkillsAnimationDuration", "1111");
+			/*PrismaUI->Invoke(view, "setSkillsAnimationDuration(5555)");
+			PrismaUI->Invoke(view, "setSkillsPositionX(40)");
+			PrismaUI->Invoke(view, "setSkillsPositionY(350)");
+			PrismaUI->Invoke(view, "setSkillsScale(1.4)");
+			PrismaUI->Invoke(view, "setWidgetEnabled(true)");*/
             ProcessSkillsUpdate(player);
         }
         else {
@@ -191,6 +197,7 @@ private:
 // Объявление внешних переменных
 PRISMA_UI_API::IVPrismaUI1* PrismaUI = nullptr;
 PrismaView view = 0;
+STB_UI_API::IVPrismaUI1* STBUI;
 
 static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
     using namespace SKSE;
@@ -199,10 +206,6 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
     switch (message->type) {
     case MessagingInterface::kPostLoad:
         // Инициализируем PrismaUI API
-        PrismaUI = static_cast<PRISMA_UI_API::IVPrismaUI1*>(
-            PRISMA_UI_API::RequestPluginAPI(PRISMA_UI_API::InterfaceVersion::V1)
-            );
-
         if (!PrismaUI) {
             logger::error("Failed to get PrismaUI API");
             return;
@@ -212,10 +215,15 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
 
     case MessagingInterface::kDataLoaded:
         // Создаем PrismaUI view
+        PrismaUI = static_cast<PRISMA_UI_API::IVPrismaUI1*>(
+            PRISMA_UI_API::RequestPluginAPI(PRISMA_UI_API::InterfaceVersion::V1)
+            );
+        STBUI = static_cast<STB_UI_API::IVPrismaUI1*>(
+            STB_UI_API::RequestPluginAPI(STB_UI_API::InterfaceVersion::V1)
+            );
         if (PrismaUI) {
             view = PrismaUI->CreateView("FremUI/index.html", [](PrismaView createdView) {
                 logger::info("PrismaUI view created successfully");
-
                 // Инициализируем все системы после создания view
                 /*SkillWidget::Initialize();
                 SkillWidget::Start();*/
@@ -238,7 +246,8 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
 
                 logger::info("All systems initialized successfully");
                 });
-         TESDataHandler::GetSingleton()->LookupForm<TESGlobal>(0x153E5, "STB.esp")->value = (float)view;
+			STBUI->GetView(view);
+
             if (view == 0) {
                 logger::error("Failed to create PrismaUI view");
             }
