@@ -218,7 +218,11 @@ class SaveMessage
 	private:
 		static void ShowSaveWidget()
 		{
-			// Здесб срать кодом
+			PrismaUI->Invoke(view, "data_from_skse_for_save_widget()");
+			/*PrismaUI->Invoke(view, "set_save_widget_position_x(222)");
+			PrismaUI->Invoke(view, "set_save_widget_position_y(600)");
+			PrismaUI->Invoke(view, "set_save_widget_enabled(true)");
+			PrismaUI->Invoke(view, "set_save_widget_always_visible(false)");*/
 		}
 		static void ShowHUDMessage(char* text, char* sound, char no_repeat)
 		{

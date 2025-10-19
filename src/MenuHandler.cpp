@@ -60,6 +60,9 @@ auto MenuHandler::ProcessEvent(const RE::MenuOpenCloseEvent* event, RE::BSTEvent
 
             // ”правление видимостью полосок навыков 
             PrismaUI->Invoke(view, ("toggleSkillsContainer(" + std::string(shouldShowHints ? "true" : "false") + ")").c_str());
+
+            // ”правление видимостью виджета сохранени€
+            PrismaUI->Invoke(view, ("toggleSaveWidgetContainer(" + std::string(shouldShowHints ? "true" : "false") + ")").c_str());
         }
     }
     return RE::BSEventNotifyControl::kContinue;
