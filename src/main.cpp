@@ -193,7 +193,64 @@ private:
 
     static inline REL::Relocation<decltype(Update)> _Update;
 };
+class SaveMessage
+	{
+	public:
+		static void Hook(SKSE::Trampoline& trampoline)
+		{
+			_ShowHUDMessage =
+				trampoline.write_call<5>(REL::ID(50718).address() + 0x13ca,
+					ShowHUDMessage);
+			_ShowHUDMessage02 =
+				trampoline.write_call<5>(REL::ID(39366).address() + 0x8f7,
+					ShowHUDMessage02);
+			_ShowHUDMessage03 =
+				trampoline.write_call<5>(REL::ID(50737).address() + 0xaf,
+					ShowHUDMessage03);
+			_ShowHUDMessage04 =
+				trampoline.write_call<5>(REL::ID(51842).address() + 0x4d,
+					ShowHUDMessage04);
+			_ShowHUDMessage05 =
+				trampoline.write_call<5>(REL::ID(34862).address() + 0x3bb,
+					ShowHUDMessage05);
+		}
 
+	private:
+		static void ShowSaveWidget()
+		{
+			// Здесб срать кодом
+		}
+		static void ShowHUDMessage(char* text, char* sound, char no_repeat)
+		{
+			ShowSaveWidget();
+			return;
+		}
+		static inline REL::Relocation<decltype(ShowHUDMessage)> _ShowHUDMessage;
+		static void ShowHUDMessage02(char* text, char* sound, char no_repeat)
+		{
+			ShowSaveWidget();
+			return;
+		}
+		static inline REL::Relocation<decltype(ShowHUDMessage02)> _ShowHUDMessage02;
+		static void ShowHUDMessage03(char* text, char* sound, char no_repeat)
+		{
+			ShowSaveWidget();
+			return;
+		}
+		static inline REL::Relocation<decltype(ShowHUDMessage03)> _ShowHUDMessage03;
+		static void ShowHUDMessage04(char* text, char* sound, char no_repeat)
+		{
+			ShowSaveWidget();
+			return;
+		}
+		static inline REL::Relocation<decltype(ShowHUDMessage04)> _ShowHUDMessage04;
+		static void ShowHUDMessage05(char* text, char* sound, char no_repeat)
+		{
+			ShowSaveWidget();
+			return;
+		}
+		static inline REL::Relocation<decltype(ShowHUDMessage05)> _ShowHUDMessage05;
+	};
 // Объявление внешних переменных
 PRISMA_UI_API::IVPrismaUI1* PrismaUI = nullptr;
 PrismaView view = 0;
@@ -229,6 +286,7 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
                 SkillWidget::Start();*/
                 SKSE::GetTrampoline().create(228);
                 PlayerUpdate::Hook();
+				SaveMessage::Hook(SKSE::GetTrampoline());
                 logger::info("PlayerUpdate successfully initialized");
                 // Инициализируем систему лога урона
                 //DamageLogManager::Initialize(PrismaUI, view);
