@@ -38,31 +38,31 @@ auto MenuHandler::ProcessEvent(const RE::MenuOpenCloseEvent* event, RE::BSTEvent
                 );
 
             // ”правление видимостью контейнера подсказок
-            PrismaUI->Invoke(view, ("toggleHintsContainer(" + std::string(shouldShowHints ? "true" : "false") + ")").c_str());
+            //PrismaUI->Invoke(view, ("toggleHintsContainer(" + std::string(shouldShowHints ? "true" : "false") + ")").c_str());
 
             // ”правление видимостью контейнера полосок HP, MP, ST
-            PrismaUI->Invoke(view, ("toggleStatsContainer(" + std::string(shouldShowHints ? "true" : "false") + ")").c_str());
-
-            // ”правление видимостью кругового виджета опыта (скрываем при загрузке)
-            PrismaUI->Invoke(view, ("toggleXpWidget(" + std::string(shouldShowHints && !isLoadingMenu ? "true" : "false") + ")").c_str());
+            //PrismaUI->Invoke(view, ("toggleStatsContainer(" + std::string(shouldShowHints ? "true" : "false") + ")").c_str());
 
             // ”правление видимостью линейного прогресс-бара опыта при загрузке
-            PrismaUI->Invoke(view, ("toggleLoadingXpBar(" + std::string(isLoadingMenu ? "true" : "false") + ")").c_str());
+            //PrismaUI->Invoke(view, ("toggleLoadingXpBar(" + std::string(isLoadingMenu ? "true" : "false") + ")").c_str());
 
             // ”правление видимостью резистов
-            PrismaUI->Invoke(view, ("toggleResistancesContainer(" + std::string(shouldShowHints ? "true" : "false") + ")").c_str());
+            //PrismaUI->Invoke(view, ("toggleResistancesContainer(" + std::string(shouldShowHints ? "true" : "false") + ")").c_str());
 
             // ”правление видимостью интоксикации
-            PrismaUI->Invoke(view, ("toggleIntoxicationContainer(" + std::string(shouldShowHints ? "true" : "false") + ")").c_str());
+            //PrismaUI->Invoke(view, ("toggleIntoxicationContainer(" + std::string(shouldShowHints ? "true" : "false") + ")").c_str());
 
             // ”правление видимостью виджета отображени€ урона
-            PrismaUI->Invoke(view, ("toggleDamageContainer(" + std::string(shouldShowHints ? "true" : "false") + ")").c_str());
+            //PrismaUI->Invoke(view, ("toggleDamageContainer(" + std::string(shouldShowHints ? "true" : "false") + ")").c_str());
 
             // ”правление видимостью полосок навыков 
             PrismaUI->Invoke(view, ("toggleSkillsContainer(" + std::string(shouldShowHints ? "true" : "false") + ")").c_str());
 
             // ”правление видимостью виджета сохранени€
             PrismaUI->Invoke(view, ("toggleSaveWidgetContainer(" + std::string(shouldShowHints ? "true" : "false") + ")").c_str());
+
+            // ”правление видимостью кругового виджета опыта (скрываем при загрузке)
+            PrismaUI->Invoke(view, ("toggleXpWidget(" + std::string(shouldShowHints && !isLoadingMenu ? "true" : "false") + ")").c_str());
         }
     }
     return RE::BSEventNotifyControl::kContinue;

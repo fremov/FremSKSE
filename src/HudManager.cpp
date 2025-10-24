@@ -1,5 +1,6 @@
 ﻿#include "HUDManager.h"
 #include "Utils.h"
+#include "ExperienceWidget.h"
 using namespace RE;
 
 namespace HUDManager {
@@ -157,12 +158,6 @@ namespace HUDManager {
             Utils::format_float(reservedMana, 2) + "," +
             "false)";
 
-        std::string circularScript = "updateCircularExperienceData(" +
-            std::to_string(currentLvl) + "," +
-            std::to_string(currentExp ? currentExp->value : 0) + "," +
-            std::to_string(nextLvlExp) + "," +
-            std::to_string(playerInCombat) + ")";
-
         std::string loadingScript = "updateLoadingExperienceData(" +
             std::to_string(currentLvl) + "," +
             std::to_string(currentExp ? currentExp->value : 0) + "," +
@@ -183,11 +178,12 @@ namespace HUDManager {
             std::to_string(maxIntox) + ")";
 
         if (PrismaUI->IsValid(view)) {
-            PrismaUI->Invoke(view, script.c_str());
-            PrismaUI->Invoke(view, circularScript.c_str());
-            PrismaUI->Invoke(view, loadingScript.c_str());
+            //PrismaUI->Invoke(view, script.c_str());
+            /*PrismaUI->Invoke(view, circularScript.c_str());
+            logger::info("lvl script: {}", circularScript);*/
+            /*PrismaUI->Invoke(view, loadingScript.c_str());
             PrismaUI->Invoke(view, resistancesScript.c_str());
-            PrismaUI->Invoke(view, intoxScript.c_str());
+            PrismaUI->Invoke(view, intoxScript.c_str());*/
         }
     }
 

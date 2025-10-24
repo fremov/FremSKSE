@@ -39,6 +39,7 @@ target("FremSKSE")
     add_headerfiles("src/HudManager.h")
     add_headerfiles("src/Utils.h")
     add_headerfiles("src/MenuHandler.h")  -- исправлено
+    add_headerfiles("src/ExperienceWidget.h")  -- исправлено
 
     add_includedirs("src")
     set_pcxxheader("src/pch.h")
@@ -52,7 +53,8 @@ after_build(function (target)
     local target_file = path.join(target:targetdir(), target:filename())
     
     -- Путь назначения
-    local dest_dir = "D:/STB/[STB] Mod Organizer/mods/FremUI/SKSE/Plugins"
+    
+    local dest_dir = "D:/Stb/[STB] Mod Organizer/mods/STB Widgets/SKSE/Plugins"
     
     -- Убедимся, что каталог назначения существует
     os.mkdir(dest_dir)

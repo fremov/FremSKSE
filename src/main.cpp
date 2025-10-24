@@ -4,7 +4,7 @@
 #include <algorithm> // Добавляем для std::max
 #include <MenuHandler.h>
 #include "STB_Widgets_API.h"
-#include "MenuHandler.h"
+#include "ExperienceWidget.h"
 
 float timeUpdateSkills;
 RE::ActorValue actorValue;
@@ -141,8 +141,8 @@ void ProcessSkillsUpdate(RE::PlayerCharacter* actor)
             skillsValueCurrentLvl[i] = currentLevel;
             skillsValueCurrentExp[i] = totalExperience;
 
-            logger::info("{}: +{} опыта, уровень {} ({}%)",
-                skillNames[i], gainedExp, currentLevel, progress);
+            /*logger::info("{}: +{} опыта, уровень {} ({}%)",
+                skillNames[i], gainedExp, currentLevel, progress);*/
         }
     }
 
@@ -159,7 +159,19 @@ void ProcessSkillsUpdate(RE::PlayerCharacter* actor)
 
         if (PrismaUI && PrismaUI->IsValid(view)) {
             PrismaUI->Invoke(view, script.c_str());
-            logger::info("Отправлено {} измененных навыков", skillsToSend.size());
+            //logger::info("Отправлено {} измененных навыков", skillsToSend.size());
+        }
+    }
+}
+
+void ExperienceWidget() {
+    std::string script;
+
+    // Отправляем только если данные изменились
+    if (ExperienceManager::GetInstance().GetUpdatedExperienceScript(script)) {
+        if (PrismaUI && PrismaUI->IsValid(view)) {
+            PrismaUI->Invoke(view, script.c_str());
+            logger::info("ExperienceWidget {}", script);
         }
     }
 }
@@ -177,13 +189,11 @@ private:
     static void Update(RE::PlayerCharacter* player, float delta)
     {
         _Update(player, delta);
+        if (timeUpdateSkills >= 1) {
+            ExperienceWidget(); // Теперь отправляет только при изменениях
+        }
         if (timeUpdateSkills >= 3 && !(player->IsInCombat())) {
             timeUpdateSkills = 0;
-			/*PrismaUI->Invoke(view, "setSkillsAnimationDuration(5555)");
-			PrismaUI->Invoke(view, "setSkillsPositionX(40)");
-			PrismaUI->Invoke(view, "setSkillsPositionY(350)");
-			PrismaUI->Invoke(view, "setSkillsScale(1.4)");
-			PrismaUI->Invoke(view, "setWidgetEnabled(true)");*/
             ProcessSkillsUpdate(player);
         }
         else {
@@ -285,26 +295,19 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
         if (PrismaUI) {
             view = PrismaUI->CreateView("FremUI/index.html", [](PrismaView createdView) {
                 logger::info("PrismaUI view created successfully");
-                // Инициализируем все системы после создания view
-                /*SkillWidget::Initialize();
-                SkillWidget::Start();*/
+                
                 SKSE::GetTrampoline().create(228);
-                PlayerUpdate::Hook();
-				SaveMessage::Hook(SKSE::GetTrampoline());
+
+				PlayerUpdate::Hook(); // полоски навыков
                 logger::info("PlayerUpdate successfully initialized");
-                // Инициализируем систему лога урона
-                //DamageLogManager::Initialize(PrismaUI, view);
-                //WeaponHitHook::Install();
-                //DamageLogManager::RegisterKeybinds();
-
-                //// Регистрируем обработчики событий
-                //Input::InputEventHandler::Register();
-                MenuHandler::register_();
-                //SkillWidget::Initialize();
-
-                // Запускаем поток обновления HUD
-                HUDManager::g_running = true;
+				SaveMessage::Hook(SKSE::GetTrampoline()); // виджет сохранения
+				logger::info("SaveMessage successfully initialized");
+				MenuHandler::register_(); // резисты, лвл, интоксикация
+				logger::info("MenuHandler successfully initialized");
+                /*HUDManager::g_running = true;
                 std::thread(HUDManager::UpdateThread).detach();
+				logger::info("HUDManager update thread started");*/
+
 
                 logger::info("All systems initialized successfully");
                 });
