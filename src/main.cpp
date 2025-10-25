@@ -265,6 +265,18 @@ class SaveMessage
 		}
 		static inline REL::Relocation<decltype(ShowHUDMessage05)> _ShowHUDMessage05;
 	};
+	TESFaction* Falkreath;
+	TESFaction* Pale;
+	TESFaction* Winterhold;
+	TESFaction*  Haafingar;
+	TESFaction*  Whiterun;
+	TESFaction* Reach;
+	TESFaction*  Eastmarch;
+	TESFaction*  Rift;
+	TESFaction*  Hjaalmarch;
+// Получить штраф Falkreath->GetCrimeGold()
+// Получить имя фракции Falkreath->GetName()
+
 // Объявление внешних переменных
 PRISMA_UI_API::IVPrismaUI1* PrismaUI = nullptr;
 PrismaView view = 0;
@@ -286,6 +298,15 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
 
     case MessagingInterface::kDataLoaded:
         // Создаем PrismaUI view
+	Falkreath = TESForm::LookupByID<TESFaction>(0x28170);
+    Pale = TESForm::LookupByID<TESFaction>(0x2816E);
+	Winterhold = TESForm::LookupByID<TESFaction>(0x2816F);
+	Haafingar = TESForm::LookupByID<TESFaction>(0x29DB0);
+	Whiterun = TESForm::LookupByID<TESFaction>(0x267EA);
+	Reach = TESForm::LookupByID<TESFaction>(0x2816C);
+	Eastmarch = TESForm::LookupByID<TESFaction>(0x267E3);
+	Rift = TESForm::LookupByID<TESFaction>(0x2816B);
+	Hjaalmarch = TESForm::LookupByID<TESFaction>(0x2816D);
         PrismaUI = static_cast<PRISMA_UI_API::IVPrismaUI1*>(
             PRISMA_UI_API::RequestPluginAPI(PRISMA_UI_API::InterfaceVersion::V1)
             );
