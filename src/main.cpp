@@ -171,7 +171,7 @@ void ExperienceWidget() {
     if (ExperienceManager::GetInstance().GetUpdatedExperienceScript(script)) {
         if (PrismaUI && PrismaUI->IsValid(view)) {
             PrismaUI->Invoke(view, script.c_str());
-            logger::info("ExperienceWidget {}", script);
+            //logger::info("ExperienceWidget {}", script);
         }
     }
 }
@@ -265,40 +265,49 @@ class SaveMessage
 		}
 		static inline REL::Relocation<decltype(ShowHUDMessage05)> _ShowHUDMessage05;
 	};
-	TESFaction* Falkreath;
-	TESFaction* Pale;
-	TESFaction* Winterhold;
-	TESFaction*  Haafingar;
-	TESFaction*  Whiterun;
-	TESFaction* Reach;
-	TESFaction*  Eastmarch;
-	TESFaction*  Rift;
-	TESFaction*  Hjaalmarch;
+
+
+class OnLocationCleared
+{
+public:
+    static void Hook(SKSE::Trampoline& trampoline)
+    {
+
+        _LocationCleared =
+            trampoline.write_call<5>(REL::ID(36872).address() + 0x1142,
+                LocationCleared);
+    }
+
+private:
+    static bool LocationCleared(RE::BGSLocation* a1, int a2, char a3)
+    {
+        auto cleared = _LocationCleared(a1, a2, a3);
+        if (cleared) {
+            // здесь какать кодом
+            logger::info("LOcation {} cleared", a1->fullName.c_str());
+            std::string outScript = "updateLocation('" + std::string(a1->fullName.c_str()) + "')";
+            logger::info("sctript {}", outScript);
+            PrismaUI->Invoke(view, outScript.c_str());
+        }
+        return cleared;
+    }
+
+    static inline REL::Relocation<decltype(LocationCleared)> _LocationCleared;
+};
+
+
+	/*RE::TESFaction* Falkreath;
+    RE::TESFaction* Pale;
+    RE::TESFaction* Winterhold;
+    RE::TESFaction*  Haafingar;
+    RE::TESFaction*  Whiterun;
+    RE::TESFaction* Reach;
+    RE::TESFaction*  Eastmarch;
+    RE::TESFaction*  Rift;
+    RE::TESFaction*  Hjaalmarch;*/
 // Получить штраф Falkreath->GetCrimeGold()
 // Получить имя фракции Falkreath->GetName()
-    class OnLocationCleared
-    {
-    public:
-        static void Hook(SKSE::Trampoline& trampoline)
-        {
-
-            _LocationCleared  =
-                trampoline.write_call<5>(REL::ID(36872).address() + 0x1142,
-                    LocationCleared);
-        }
-
-    private:
-        static bool LocationCleared(BGSLocation* a1, int a2, char a3)
-        {
-            auto cleared = _LocationCleared(a1, a2, a3);
-            if (cleared) {
-                // здесь какать кодом
-            }
-            return cleared;
-        }
-
-        static inline REL::Relocation<decltype(LocationCleared)> _LocationCleared;
-    };
+    
 // Объявление внешних переменных
 PRISMA_UI_API::IVPrismaUI1* PrismaUI = nullptr;
 PrismaView view = 0;
@@ -320,7 +329,7 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
 
     case MessagingInterface::kDataLoaded:
         // Создаем PrismaUI view
-	Falkreath = TESForm::LookupByID<TESFaction>(0x28170);
+	/*Falkreath = TESForm::LookupByID<TESFaction>(0x28170);
     Pale = TESForm::LookupByID<TESFaction>(0x2816E);
 	Winterhold = TESForm::LookupByID<TESFaction>(0x2816F);
 	Haafingar = TESForm::LookupByID<TESFaction>(0x29DB0);
@@ -328,7 +337,7 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
 	Reach = TESForm::LookupByID<TESFaction>(0x2816C);
 	Eastmarch = TESForm::LookupByID<TESFaction>(0x267E3);
 	Rift = TESForm::LookupByID<TESFaction>(0x2816B);
-	Hjaalmarch = TESForm::LookupByID<TESFaction>(0x2816D);
+	Hjaalmarch = TESForm::LookupByID<TESFaction>(0x2816D);*/
         PrismaUI = static_cast<PRISMA_UI_API::IVPrismaUI1*>(
             PRISMA_UI_API::RequestPluginAPI(PRISMA_UI_API::InterfaceVersion::V1)
             );

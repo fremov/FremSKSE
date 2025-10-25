@@ -63,6 +63,9 @@ auto MenuHandler::ProcessEvent(const RE::MenuOpenCloseEvent* event, RE::BSTEvent
 
             // ”правление видимостью кругового виджета опыта (скрываем при загрузке)
             PrismaUI->Invoke(view, ("toggleXpWidget(" + std::string(shouldShowHints && !isLoadingMenu ? "true" : "false") + ")").c_str());
+
+            // ”правление видимостью виджета локаций
+            //PrismaUI->Invoke(view, ("toggleLocationWidget(" + std::string(shouldShowHints && !isLoadingMenu ? "true" : "false") + ")").c_str());
         }
     }
     return RE::BSEventNotifyControl::kContinue;
