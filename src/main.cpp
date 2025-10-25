@@ -276,7 +276,29 @@ class SaveMessage
 	TESFaction*  Hjaalmarch;
 // Получить штраф Falkreath->GetCrimeGold()
 // Получить имя фракции Falkreath->GetName()
+    class OnLocationCleared
+    {
+    public:
+        static void Hook(SKSE::Trampoline& trampoline)
+        {
 
+            _LocationCleared  =
+                trampoline.write_call<5>(REL::ID(36872).address() + 0x1142,
+                    LocationCleared);
+        }
+
+    private:
+        static bool LocationCleared(BGSLocation* a1, int a2, char a3)
+        {
+            auto cleared = _LocationCleared(a1, a2, a3);
+            if (cleared) {
+                // здесь какать кодом
+            }
+            return cleared;
+        }
+
+        static inline REL::Relocation<decltype(LocationCleared)> _LocationCleared;
+    };
 // Объявление внешних переменных
 PRISMA_UI_API::IVPrismaUI1* PrismaUI = nullptr;
 PrismaView view = 0;
@@ -318,7 +340,7 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
                 logger::info("PrismaUI view created successfully");
                 
                 SKSE::GetTrampoline().create(228);
-
+                OnLocationCleared::Hook(SKSE::GetTrampoline());
 				PlayerUpdate::Hook(); // полоски навыков
                 logger::info("PlayerUpdate successfully initialized");
 				SaveMessage::Hook(SKSE::GetTrampoline()); // виджет сохранения
