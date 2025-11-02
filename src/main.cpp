@@ -12,6 +12,17 @@ std::vector<int> skillsValueCurrentLvl = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
 std::vector <float> skillsValueCurrentExp = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 std::vector<int> skillsValuePreviousLvl = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
 
+RE::TESFaction* Falkreath;
+RE::TESFaction* Pale;
+RE::TESFaction* Winterhold;
+RE::TESFaction* Haafingar;
+RE::TESFaction* Whiterun;
+RE::TESFaction* Reach;
+RE::TESFaction* Eastmarch;
+RE::TESFaction* Rift;
+RE::TESFaction* Hjaalmarch;
+
+
 // Функция для округления в меньшую сторону
 int FloorToInt(float value) {
     return static_cast<int>(std::floor(value));
@@ -164,16 +175,58 @@ void ProcessSkillsUpdate(RE::PlayerCharacter* actor)
     }
 }
 
-void ExperienceWidget() {
-    std::string script;
+//void ExperienceWidget() {
+//    std::string script;
+//
+//    // Отправляем только если данные изменились
+//    if (ExperienceManager::GetInstance().GetUpdatedExperienceScript(script)) {
+//        if (PrismaUI && PrismaUI->IsValid(view)) {
+//            PrismaUI->Invoke(view, script.c_str());
+//            //logger::info("ExperienceWidget {}", script);
+//        }
+//    }
+//}
 
-    // Отправляем только если данные изменились
-    if (ExperienceManager::GetInstance().GetUpdatedExperienceScript(script)) {
-        if (PrismaUI && PrismaUI->IsValid(view)) {
-            PrismaUI->Invoke(view, script.c_str());
-            //logger::info("ExperienceWidget {}", script);
+std::string buildCrimeDataScript() {
+    std::vector<std::string> crimeData;
+
+    // Функция для добавления данных холда (всегда, даже если 0)
+    auto addHoldData = [&](RE::TESFaction* faction, const std::string& holdKey) {
+        if (faction) {
+            int crimeGold = faction->GetCrimeGold();
+            // Всегда добавляем данные, даже если штраф 0
+            crimeData.push_back("\"" + holdKey + "\":" + std::to_string(crimeGold));
+        }
+        else {
+            // Если фракция не найдена, отправляем 0
+            crimeData.push_back("\"" + holdKey + "\":0");
+        }
+        };
+
+    // Добавляем ВСЕ холды
+    addHoldData(Falkreath, "falkreath");
+    addHoldData(Pale, "pale");
+    addHoldData(Winterhold, "winterhold");
+    addHoldData(Haafingar, "haafingar");
+    addHoldData(Whiterun, "whiterun");
+    addHoldData(Reach, "reach");
+    addHoldData(Eastmarch, "eastmarch");
+    addHoldData(Rift, "rift");
+    addHoldData(Hjaalmarch, "hjaalmarch");
+
+    // Формируем JSON строку
+    std::string jsonData = "{";
+    for (size_t i = 0; i < crimeData.size(); ++i) {
+        jsonData += crimeData[i];
+        if (i < crimeData.size() - 1) {
+            jsonData += ",";
         }
     }
+    jsonData += "}";
+
+    // Формируем скрипт с JSON строкой
+    std::string script = "updateCrimeWidgets('" + jsonData + "')";
+    return script;
 }
 
 class PlayerUpdate
@@ -189,8 +242,8 @@ private:
     static void Update(RE::PlayerCharacter* player, float delta)
     {
         _Update(player, delta);
-        if (timeUpdateSkills >= 1) {
-            ExperienceWidget(); // Теперь отправляет только при изменениях
+        if (timeUpdateSkills >= 3) {
+            PrismaUI->Invoke(view, buildCrimeDataScript().c_str());
         }
         if (timeUpdateSkills >= 3 && !(player->IsInCombat())) {
             timeUpdateSkills = 0;
@@ -203,6 +256,7 @@ private:
 
     static inline REL::Relocation<decltype(Update)> _Update;
 };
+
 class SaveMessage
 	{
 	public:
@@ -283,30 +337,21 @@ private:
     {
         auto cleared = _LocationCleared(a1, a2, a3);
         if (cleared) {
-            // здесь какать кодом
+            //auto player_crime = RE::PlayerCharacter::GetSingleton();
             logger::info("LOcation {} cleared", a1->fullName.c_str());
-            std::string outScript = "updateLocation('" + std::string(a1->fullName.c_str()) + "')";
-            logger::info("sctript {}", outScript);
+            std::string outScript = "updateLocationWidget('" + std::string(a1->fullName.c_str()) + "')";
+            /*if (!(player_crime->IsInCombat())) {
+                logger::info("sctript {}", outScript);
+                PrismaUI->Invoke(view, outScript.c_str());
+            }*/
             PrismaUI->Invoke(view, outScript.c_str());
+            
         }
         return cleared;
     }
 
     static inline REL::Relocation<decltype(LocationCleared)> _LocationCleared;
 };
-
-
-	/*RE::TESFaction* Falkreath;
-    RE::TESFaction* Pale;
-    RE::TESFaction* Winterhold;
-    RE::TESFaction*  Haafingar;
-    RE::TESFaction*  Whiterun;
-    RE::TESFaction* Reach;
-    RE::TESFaction*  Eastmarch;
-    RE::TESFaction*  Rift;
-    RE::TESFaction*  Hjaalmarch;*/
-// Получить штраф Falkreath->GetCrimeGold()
-// Получить имя фракции Falkreath->GetName()
     
 // Объявление внешних переменных
 PRISMA_UI_API::IVPrismaUI1* PrismaUI = nullptr;
@@ -329,7 +374,7 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
 
     case MessagingInterface::kDataLoaded:
         // Создаем PrismaUI view
-	/*Falkreath = TESForm::LookupByID<TESFaction>(0x28170);
+	Falkreath = TESForm::LookupByID<TESFaction>(0x28170);
     Pale = TESForm::LookupByID<TESFaction>(0x2816E);
 	Winterhold = TESForm::LookupByID<TESFaction>(0x2816F);
 	Haafingar = TESForm::LookupByID<TESFaction>(0x29DB0);
@@ -337,7 +382,7 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
 	Reach = TESForm::LookupByID<TESFaction>(0x2816C);
 	Eastmarch = TESForm::LookupByID<TESFaction>(0x267E3);
 	Rift = TESForm::LookupByID<TESFaction>(0x2816B);
-	Hjaalmarch = TESForm::LookupByID<TESFaction>(0x2816D);*/
+	Hjaalmarch = TESForm::LookupByID<TESFaction>(0x2816D);
         PrismaUI = static_cast<PRISMA_UI_API::IVPrismaUI1*>(
             PRISMA_UI_API::RequestPluginAPI(PRISMA_UI_API::InterfaceVersion::V1)
             );
@@ -348,7 +393,7 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
             view = PrismaUI->CreateView("FremUI/index.html", [](PrismaView createdView) {
                 logger::info("PrismaUI view created successfully");
                 
-                SKSE::GetTrampoline().create(228);
+                SKSE::GetTrampoline().create(500);
                 OnLocationCleared::Hook(SKSE::GetTrampoline());
 				PlayerUpdate::Hook(); // полоски навыков
                 logger::info("PlayerUpdate successfully initialized");
