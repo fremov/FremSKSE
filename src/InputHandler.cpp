@@ -1,4 +1,4 @@
-#include "InputHandler.h"
+#include "include/InputHandler.h"
 
 namespace Input {
     void InputEventHandler::Register() {
@@ -107,9 +107,9 @@ namespace Input {
                 default:
                     continue;
                 }
-                if (key == 0x1C && button->IsDown()) {
+                /*if (key == 0x1C && button->IsDown()) {
                     PrismaUI->Invoke(view, "toggleHintsContainer()");
-                }
+                }*/
             }
         }
 

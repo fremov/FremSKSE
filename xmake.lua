@@ -26,23 +26,19 @@ target("FremSKSE")
     })
 
     add_files("src/**.cpp")
-    add_files("src/SkillWidget.cpp")
     add_files("src/InputHandler.cpp") 
-    add_files("src/HudManager.cpp")
-    add_files("src/Utils.cpp")
     add_files("src/MenuHandler.cpp")
 
-    -- ИСПРАВЛЯЕМ ОПЕЧАТКИ В ПУТЯХ
-    add_headerfiles("src/**.h")
-    add_headerfiles("src/SkillWidget.h")  -- исправлено
-    add_headerfiles("src/InputHandler.h")
-    add_headerfiles("src/HudManager.h")
-    add_headerfiles("src/Utils.h")
-    add_headerfiles("src/MenuHandler.h")  -- исправлено
-    add_headerfiles("src/ExperienceWidget.h")  -- исправлено
+    add_headerfiles("src/include/**.h")
+    add_headerfiles("src/include/InputHandler.h")
+    add_headerfiles("src/include/MenuHandler.h")  
+    add_headerfiles("src/include/json.hpp")  
+    add_headerfiles("src/include/pch.h")  
+    add_headerfiles("src/include/PrismaUI_API.h")  
+    add_headerfiles("src/include/STB_Widgets_API.h")  
 
     add_includedirs("src")
-    set_pcxxheader("src/pch.h")
+    set_pcxxheader("src/include/pch.h")
 
 after_build(function (target)
     import("core.project.config")

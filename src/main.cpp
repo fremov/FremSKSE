@@ -1,10 +1,15 @@
 ﻿#include "SKSE/API.h"
-#include "pch.h"
+#include "include/pch.h"
 #include <cmath>
-#include <algorithm> // Добавляем для std::max
-#include <MenuHandler.h>
-#include "STB_Widgets_API.h"
-#include "ExperienceWidget.h"
+#include <algorithm> 
+#include <include/MenuHandler.h>
+#include "include/STB_Widgets_API.h"
+#include <include/json.hpp>
+#include <iostream>
+#include <fstream>
+#include <unordered_set>
+
+using json = nlohmann::json;
 
 float timeUpdateSkills;
 RE::ActorValue actorValue;
@@ -22,7 +27,79 @@ RE::TESFaction* Eastmarch;
 RE::TESFaction* Rift;
 RE::TESFaction* Hjaalmarch;
 
+class SimpleHintReader {
+private:
+    json data;
 
+public:
+    bool load(const std::string& filename) {
+        std::ifstream file(filename);
+        if (!file.is_open()) {
+            logger::info("Err open json");
+            return false;
+        }
+
+        try {
+            data = json::parse(file);
+            //logger::info("JSON loaded sucucsefuly: {}", data.size());
+
+            // Вывод всех подсказок для отладки
+            for (const auto& item : data) {
+                if (item.contains("hint")) {
+                    std::string hint = item["hint"];
+                    //logger::info("Hint find: '{}'", hint);
+                }
+            }
+            return true;
+        }
+        catch (const std::exception& e) {
+            logger::info("Err read json: {}", e.what());
+            return false;
+        }
+    }
+
+    std::string getDescription(const std::string& hint) {
+        //logger::info("finding hint: '{}'", hint);
+
+        for (const auto& item : data) {
+            if (item.contains("hint")) {
+                std::string current_hint = item["hint"];
+                if (current_hint == hint) {
+                    //logger::info("Hint find!");
+                    return item["description"];
+                }
+            }
+        }
+        logger::info("Hint not Find");
+        return "Hint not Find";
+    }
+};
+
+class HintManager {
+private:
+    static inline std::unordered_set<std::string> shownHints;
+    SimpleHintReader reader;
+
+public:
+    HintManager() {
+        if (!reader.load("D:/Stb/[STB] Mod Organizer/mods/STB Widgets/SKSE/Plugins/data_hints.json")) {
+            logger::info("Ne udalos zagrs file");
+        }
+    }
+
+    // Основной метод для показа подсказки (только один раз)
+    void showHintOnce(const std::string& hintName) {
+        if (shownHints.count(hintName) > 0) {
+            return;
+        }
+
+        std::string hint_data = reader.getDescription(hintName);
+        if (hint_data != "Hint not Find") {
+            logger::info("{}: {}", hintName, hint_data);
+            shownHints.insert(hintName);
+        }
+    }
+};
 // Функция для округления в меньшую сторону
 int FloorToInt(float value) {
     return static_cast<int>(std::floor(value));
@@ -175,18 +252,6 @@ void ProcessSkillsUpdate(RE::PlayerCharacter* actor)
     }
 }
 
-//void ExperienceWidget() {
-//    std::string script;
-//
-//    // Отправляем только если данные изменились
-//    if (ExperienceManager::GetInstance().GetUpdatedExperienceScript(script)) {
-//        if (PrismaUI && PrismaUI->IsValid(view)) {
-//            PrismaUI->Invoke(view, script.c_str());
-//            //logger::info("ExperienceWidget {}", script);
-//        }
-//    }
-//}
-
 std::string buildCrimeDataScript() {
     std::vector<std::string> crimeData;
 
@@ -242,14 +307,25 @@ private:
     static void Update(RE::PlayerCharacter* player, float delta)
     {
         _Update(player, delta);
-        if (timeUpdateSkills >= 3) {
+        static HintManager hintManager;
+        if (timeUpdateSkills >= 3 && !(player->IsInCombat())) {
             PrismaUI->Invoke(view, buildCrimeDataScript().c_str());
         }
+        
+        // Ваши условия для подсказок
+        if (player->GetLevel() >= 10 && !(player->IsInCombat())) {
+            hintManager.showHintOnce("Alchemy");
+        }
+
+        // Добавляйте другие условия здесь
+        if (player->GetLevel() >= 20 && !(player->IsInCombat())) {
+            hintManager.showHintOnce("Interface Settings");
+        }
+
         if (timeUpdateSkills >= 3 && !(player->IsInCombat())) {
             timeUpdateSkills = 0;
             ProcessSkillsUpdate(player);
-        }
-        else {
+        } else {
             timeUpdateSkills += delta;
         }
     }
@@ -283,10 +359,6 @@ class SaveMessage
 		static void ShowSaveWidget()
 		{
 			PrismaUI->Invoke(view, "data_from_skse_for_save_widget()");
-			/*PrismaUI->Invoke(view, "set_save_widget_position_x(222)");
-			PrismaUI->Invoke(view, "set_save_widget_position_y(600)");
-			PrismaUI->Invoke(view, "set_save_widget_enabled(true)");
-			PrismaUI->Invoke(view, "set_save_widget_always_visible(false)");*/
 		}
 		static void ShowHUDMessage(char* text, char* sound, char no_repeat)
 		{
@@ -337,22 +409,16 @@ private:
     {
         auto cleared = _LocationCleared(a1, a2, a3);
         if (cleared) {
-            //auto player_crime = RE::PlayerCharacter::GetSingleton();
-            logger::info("LOcation {} cleared", a1->fullName.c_str());
+            //logger::info("Location {} cleared", a1->fullName.c_str());
             std::string outScript = "updateLocationWidget('" + std::string(a1->fullName.c_str()) + "')";
-            /*if (!(player_crime->IsInCombat())) {
-                logger::info("sctript {}", outScript);
-                PrismaUI->Invoke(view, outScript.c_str());
-            }*/
             PrismaUI->Invoke(view, outScript.c_str());
-            
         }
         return cleared;
     }
 
     static inline REL::Relocation<decltype(LocationCleared)> _LocationCleared;
 };
-    
+
 // Объявление внешних переменных
 PRISMA_UI_API::IVPrismaUI1* PrismaUI = nullptr;
 PrismaView view = 0;
@@ -373,16 +439,16 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
         break;
 
     case MessagingInterface::kDataLoaded:
-        // Создаем PrismaUI view
-	Falkreath = TESForm::LookupByID<TESFaction>(0x28170);
-    Pale = TESForm::LookupByID<TESFaction>(0x2816E);
-	Winterhold = TESForm::LookupByID<TESFaction>(0x2816F);
-	Haafingar = TESForm::LookupByID<TESFaction>(0x29DB0);
-	Whiterun = TESForm::LookupByID<TESFaction>(0x267EA);
-	Reach = TESForm::LookupByID<TESFaction>(0x2816C);
-	Eastmarch = TESForm::LookupByID<TESFaction>(0x267E3);
-	Rift = TESForm::LookupByID<TESFaction>(0x2816B);
-	Hjaalmarch = TESForm::LookupByID<TESFaction>(0x2816D);
+	    Falkreath = TESForm::LookupByID<TESFaction>(0x28170);
+        Pale = TESForm::LookupByID<TESFaction>(0x2816E);
+	    Winterhold = TESForm::LookupByID<TESFaction>(0x2816F);
+	    Haafingar = TESForm::LookupByID<TESFaction>(0x29DB0);
+	    Whiterun = TESForm::LookupByID<TESFaction>(0x267EA);
+	    Reach = TESForm::LookupByID<TESFaction>(0x2816C);
+	    Eastmarch = TESForm::LookupByID<TESFaction>(0x267E3);
+	    Rift = TESForm::LookupByID<TESFaction>(0x2816B);
+	    Hjaalmarch = TESForm::LookupByID<TESFaction>(0x2816D);
+
         PrismaUI = static_cast<PRISMA_UI_API::IVPrismaUI1*>(
             PRISMA_UI_API::RequestPluginAPI(PRISMA_UI_API::InterfaceVersion::V1)
             );
@@ -401,15 +467,11 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
 				logger::info("SaveMessage successfully initialized");
 				MenuHandler::register_(); // резисты, лвл, интоксикация
 				logger::info("MenuHandler successfully initialized");
-                /*HUDManager::g_running = true;
-                std::thread(HUDManager::UpdateThread).detach();
-				logger::info("HUDManager update thread started");*/
-
-
-                logger::info("All systems initialized successfully");
                 });
-			STBUI->GetView(view);
 
+			    STBUI->GetView(view);
+                logger::info("STB_API: {}", view);
+                logger::info("All systems initialized successfully");
             if (view == 0) {
                 logger::error("Failed to create PrismaUI view");
             }
