@@ -8,6 +8,8 @@
 #include <iostream>
 #include <fstream>
 #include <unordered_set>
+#include "include/InputHandler.h"
+#include <include/KillCounter.h>
 
 using json = nlohmann::json;
 
@@ -27,11 +29,18 @@ RE::TESFaction* Eastmarch;
 RE::TESFaction* Rift;
 RE::TESFaction* Hjaalmarch;
 
+using json = nlohmann::json;
+
 class SimpleHintReader {
 private:
     json data;
 
 public:
+    struct HintData {
+        std::string name;
+        std::string description;
+    };
+
     bool load(const std::string& filename) {
         std::ifstream file(filename);
         if (!file.is_open()) {
@@ -41,15 +50,7 @@ public:
 
         try {
             data = json::parse(file);
-            //logger::info("JSON loaded sucucsefuly: {}", data.size());
-
-            // Вывод всех подсказок для отладки
-            for (const auto& item : data) {
-                if (item.contains("hint")) {
-                    std::string hint = item["hint"];
-                    //logger::info("Hint find: '{}'", hint);
-                }
-            }
+            logger::info("JSON loaded successfully: {} hints", data.size());
             return true;
         }
         catch (const std::exception& e) {
@@ -58,48 +59,102 @@ public:
         }
     }
 
-    std::string getDescription(const std::string& hint) {
-        //logger::info("finding hint: '{}'", hint);
-
+    // Ищем по ID, возвращаем русское название и описание
+    HintData getHintData(const std::string& hintId) {
         for (const auto& item : data) {
-            if (item.contains("hint")) {
-                std::string current_hint = item["hint"];
-                if (current_hint == hint) {
-                    //logger::info("Hint find!");
-                    return item["description"];
+            if (item.contains("id") && item["id"] == hintId) {
+                HintData result;
+                if (item.contains("name")) {
+                    result.name = item["name"];
                 }
+                if (item.contains("description")) {
+                    result.description = item["description"];
+                }
+                return result;
             }
         }
-        logger::info("Hint not Find");
-        return "Hint not Find";
+        return { "", "" }; // Возвращаем пустые строки если не нашли
     }
 };
 
 class HintManager {
 private:
     static inline std::unordered_set<std::string> shownHints;
+    static inline std::chrono::steady_clock::time_point lastHintTime;
+    static inline const std::chrono::milliseconds HINT_COOLDOWN = std::chrono::seconds(12); // 12 секунд между подсказками
     SimpleHintReader reader;
 
 public:
     HintManager() {
-        if (!reader.load("D:/Stb/[STB] Mod Organizer/mods/STB Widgets/SKSE/Plugins/data_hints.json")) {
+        std::string currentPath = std::filesystem::current_path().string();
+        //logger::info("PAth {}", currentPath);
+        if (!reader.load(currentPath + "/[STB] Mod Organizer/mods/STB Widgets/SKSE/Plugins/StorageUtilData/data_hints.json")) {
             logger::info("Ne udalos zagrs file");
         }
+        lastHintTime = std::chrono::steady_clock::now() - HINT_COOLDOWN; // Инициализируем чтобы первая подсказка показывалась сразу
     }
 
-    // Основной метод для показа подсказки (только один раз)
-    void showHintOnce(const std::string& hintName) {
-        if (shownHints.count(hintName) > 0) {
+    void showHintOnce(const std::string& hintId) {
+        if (shownHints.count(hintId) > 0) {
             return;
         }
 
-        std::string hint_data = reader.getDescription(hintName);
-        if (hint_data != "Hint not Find") {
-            logger::info("{}: {}", hintName, hint_data);
-            shownHints.insert(hintName);
+        // Проверяем cooldown
+        auto now = std::chrono::steady_clock::now();
+        if (now - lastHintTime < HINT_COOLDOWN) {
+            return; // Слишком рано после предыдущей подсказки
+        }
+
+        auto hintData = reader.getHintData(hintId);
+        if (!hintData.name.empty() && !hintData.description.empty()) {
+            // Сначала закрываем текущую подсказку
+            std::string closeScript = "if (typeof forceUnmountHints === 'function') forceUnmountHints();";
+            PrismaUI->Invoke(view, closeScript.c_str());
+
+            // Ждем немного перед показом следующей
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+            // Экранируем для JavaScript
+            std::string escaped_name = escapeForJavaScript(hintData.name);
+            std::string escaped_description = escapeForJavaScript(hintData.description);
+
+            // Показываем новую подсказку
+            std::string script = "if (window.receiveHintData) { window.receiveHintData('" +
+                escaped_name + "', `" + escaped_description + "`); }";
+
+            PrismaUI->Invoke(view, script.c_str());
+            shownHints.insert(hintId);
+            lastHintTime = now;
+
+            logger::info("Showing hint: {} - {}", hintId, hintData.name);
         }
     }
+
+    // Сбросить все показанные подсказки (для тестирования)
+    void resetAllHints() {
+        shownHints.clear();
+        lastHintTime = std::chrono::steady_clock::now() - HINT_COOLDOWN;
+    }
+
+private:
+    std::string escapeForJavaScript(const std::string& input) {
+        std::string result;
+        for (char c : input) {
+            switch (c) {
+            case '\\': result += "\\\\"; break;
+            case '\'': result += "\\'"; break;
+            case '\"': result += "\\\""; break;
+            case '`': result += "\\`"; break;
+            case '\n': result += "\\n"; break;
+            case '\r': result += "\\r"; break;
+            case '\t': result += "\\t"; break;
+            default: result += c; break;
+            }
+        }
+        return result;
+    }
 };
+
 // Функция для округления в меньшую сторону
 int FloorToInt(float value) {
     return static_cast<int>(std::floor(value));
@@ -308,24 +363,103 @@ private:
     {
         _Update(player, delta);
         static HintManager hintManager;
+        static int lastPlayerLevel = 1;
+        static bool wasInCombat = false;
+
+        // виджет штрафов
         if (timeUpdateSkills >= 3 && !(player->IsInCombat())) {
             PrismaUI->Invoke(view, buildCrimeDataScript().c_str());
         }
-        
-        // Ваши условия для подсказок
-        if (player->GetLevel() >= 10 && !(player->IsInCombat())) {
-            hintManager.showHintOnce("Alchemy");
+
+        // Проверяем условия подсказок каждый кадр
+        int currentLevel = player->GetLevel();
+        bool isInCombat = player->IsInCombat();
+
+        // После создания персонажа (уровень 1)
+        if (currentLevel == 1 && lastPlayerLevel == 1) {
+            hintManager.showHintOnce("interface_settings");
         }
 
-        // Добавляйте другие условия здесь
-        if (player->GetLevel() >= 20 && !(player->IsInCombat())) {
-            hintManager.showHintOnce("Interface Settings");
+        // При поднятии 2 уровня
+        if (currentLevel == 2 && lastPlayerLevel == 1) {
+            hintManager.showHintOnce("character_enhancement");
         }
 
+        // При поднятии 4 уровня
+        if (currentLevel == 4 && lastPlayerLevel == 3) {
+            hintManager.showHintOnce("skill_points_purchase");
+        }
+
+        // При поднятии 5, 25, 45 уровня
+        if ((currentLevel == 5 || currentLevel == 25 || currentLevel == 45) &&
+            lastPlayerLevel == currentLevel - 1) {
+            hintManager.showHintOnce("god_worship");
+        }
+
+        // При поднятии 7 уровня
+        if (currentLevel == 7 && lastPlayerLevel == 6) {
+            hintManager.showHintOnce("experience_training");
+        }
+
+        // При поднятии 8 уровня
+        if (currentLevel == 8 && lastPlayerLevel == 7) {
+            hintManager.showHintOnce("damage_types");
+        }
+
+        // При поднятии 9 уровня
+        if (currentLevel == 9 && lastPlayerLevel == 8) {
+            hintManager.showHintOnce("resistances");
+        }
+
+        // При поднятии 10 уровня
+        if (currentLevel == 10 && lastPlayerLevel == 9) {
+            hintManager.showHintOnce("damage_penetration");
+        }
+
+        // При весе 95% от макс
+        float currentWeight = player->AsActorValueOwner()->GetActorValue(RE::ActorValue::kCarryWeight);
+        float maxWeight = player->AsActorValueOwner()->GetPermanentActorValue(RE::ActorValue::kCarryWeight);
+        if (currentWeight / maxWeight >= 0.95f) {
+            hintManager.showHintOnce("backpack");
+        }
+
+        // При выходе из боя
+        if (wasInCombat && !isInCombat) {
+            hintManager.showHintOnce("loot_conversion");
+        }
+
+        // При снижении расходуемого атрибута меньше 20 ед вне боя
+        if (!isInCombat) {
+            float health = player->AsActorValueOwner()->GetActorValue(RE::ActorValue::kHealth);
+            float magicka = player->AsActorValueOwner()->GetActorValue(RE::ActorValue::kMagicka);
+            float stamina = player->AsActorValueOwner()->GetActorValue(RE::ActorValue::kStamina);
+
+            if ((health > 0 && health < 20.0f) ||
+                (magicka > 0 && magicka < 20.0f) ||
+                (stamina > 0 && stamina < 20.0f)) {
+                hintManager.showHintOnce("movement_restrictions");
+            }
+        }
+
+        // При отрицательном значении любой из характеристик
+        float currentHealth = player->AsActorValueOwner()->GetActorValue(RE::ActorValue::kHealth);
+        float currentMagicka = player->AsActorValueOwner()->GetActorValue(RE::ActorValue::kMagicka);
+        float currentStamina = player->AsActorValueOwner()->GetActorValue(RE::ActorValue::kStamina);
+
+        if (currentHealth < 0 || currentMagicka < 0 || currentStamina < 0) {
+            hintManager.showHintOnce("negative_attribute_penalties");
+        }
+
+        // Обновляем состояние
+        lastPlayerLevel = currentLevel;
+        wasInCombat = isInCombat;
+
+        // Существующая логика обновления навыков
         if (timeUpdateSkills >= 3 && !(player->IsInCombat())) {
             timeUpdateSkills = 0;
             ProcessSkillsUpdate(player);
-        } else {
+        }
+        else {
             timeUpdateSkills += delta;
         }
     }
@@ -419,6 +553,44 @@ private:
     static inline REL::Relocation<decltype(LocationCleared)> _LocationCleared;
 };
 
+class DeathEventHandler : public RE::BSTEventSink<RE::TESDeathEvent> {
+public:
+    static void Install() {
+        auto scriptEventSource = RE::ScriptEventSourceHolder::GetSingleton();
+        if (scriptEventSource) {
+            scriptEventSource->AddEventSink(GetSingleton());
+            logger::info("Death event handler installed");
+        }
+    }
+
+    RE::BSEventNotifyControl ProcessEvent(const RE::TESDeathEvent* event, RE::BSTEventSource<RE::TESDeathEvent>*) override {
+        if (event && event->dead && event->actorDying) {
+            RE::Actor* deadActor = event->actorDying->As<RE::Actor>();
+
+            // Базовая проверка на валидность актора
+            if (!deadActor || deadActor->IsPlayerRef()) {
+                return RE::BSEventNotifyControl::kContinue;
+            }
+
+            // Проверка что убил игрок (простая версия)
+            auto player = RE::PlayerCharacter::GetSingleton();
+            if (!player) return RE::BSEventNotifyControl::kContinue;
+
+            // Проверка враждебности и что это не призыв
+            if (deadActor->IsHostileToActor(player) && !deadActor->IsSummoned()) {
+                KillCounter::Increment();
+                logger::info("Kill counted: {}", deadActor->GetDisplayFullName());
+            }
+        }
+        return RE::BSEventNotifyControl::kContinue;
+    }
+
+    static DeathEventHandler* GetSingleton() {
+        static DeathEventHandler instance;
+        return &instance;
+    }
+};
+
 // Объявление внешних переменных
 PRISMA_UI_API::IVPrismaUI1* PrismaUI = nullptr;
 PrismaView view = 0;
@@ -467,6 +639,9 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
 				logger::info("SaveMessage successfully initialized");
 				MenuHandler::register_(); // резисты, лвл, интоксикация
 				logger::info("MenuHandler successfully initialized");
+                Input::InputEventHandler::Register();
+                logger::info("InputEventHandler successfully initialized");
+                DeathEventHandler::Install();
                 });
 
 			    STBUI->GetView(view);

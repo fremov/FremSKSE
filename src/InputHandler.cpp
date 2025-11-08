@@ -1,5 +1,5 @@
 #include "include/InputHandler.h"
-
+#include "include/KillCounter.h"
 namespace Input {
     void InputEventHandler::Register() {
         auto deviceManager = RE::BSInputDeviceManager::GetSingleton();
@@ -110,6 +110,19 @@ namespace Input {
                 /*if (key == 0x1C && button->IsDown()) {
                     PrismaUI->Invoke(view, "toggleHintsContainer()");
                 }*/
+                if (key == 0x10 && button->IsDown()) {
+                    PrismaUI->Invoke(view, "updateWidgetHintEnabled(false)");
+                }
+                // 0x1C - enter
+                if (key == 0x1C && button->IsDown()) {
+                    std::string unmountScript = "forceUnmountHints();";
+                    PrismaUI->Invoke(view, unmountScript.c_str());
+                }
+                // 0x10  - q
+                if (key == 0x10 && button->IsDown()) {
+                    KillCounter::Reset();
+                }
+                
             }
         }
 
