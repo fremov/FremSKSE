@@ -1,5 +1,4 @@
 #include "include/InputHandler.h"
-#include "include/KillCounter.h"
 #include "include/HintManager.h" 
 namespace Input {
     void InputEventHandler::Register() {
@@ -120,11 +119,6 @@ namespace Input {
 
                     HintManager::GetSingleton().onHintClosed();
                 }
-                // 0x10  - q
-                /*if (key == 0x10 && button->IsDown()) {
-                    KillCounter::Reset();
-                }*/
-
             }
         }
 

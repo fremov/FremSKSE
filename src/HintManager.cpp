@@ -96,15 +96,6 @@ void HintManager::onHintClosed() {
     }
 }
 
-void HintManager::resetAllHints() {
-    shownHints.clear();
-    isHintActive = false;
-    while (!pendingHints.empty()) {
-        pendingHints.pop();
-    }
-    logger::info("All hints reset");
-}
-
 std::string HintManager::escapeForJavaScript(const std::string& input) {
     std::string result;
     for (char c : input) {

@@ -42,5 +42,4 @@ public:
 
     void showHintOnce(const std::string& hintId);
     void onHintClosed();
-    void resetAllHints();
 };

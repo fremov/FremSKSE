@@ -13,6 +13,15 @@
 #include <chrono>
 #include <atomic>
 #include "PrismaUI_API.h"
+#include <cmath>
+#include <algorithm> 
+#include "MenuHandler.h"
+#include "STB_Widgets_API.h"
+#include "json.hpp"
+#include <iostream>
+#include <unordered_set>
+#include "InputHandler.h"
+#include "HintManager.h"
 
 
 #ifdef NDEBUG

@@ -1,16 +1,6 @@
 ﻿#include "SKSE/API.h"
 #include "include/pch.h"
-#include <cmath>
-#include <algorithm> 
-#include <include/MenuHandler.h>
-#include "include/STB_Widgets_API.h"
-#include <include/json.hpp>
-#include <iostream>
-#include <fstream>
-#include <unordered_set>
-#include "include/InputHandler.h"
-#include <include/KillCounter.h>
-#include "include/HintManager.h"
+
 
 using json = nlohmann::json;
 
@@ -32,7 +22,6 @@ RE::TESFaction* Hjaalmarch;
 
 using json = nlohmann::json;
 
-// Функция для округления в меньшую сторону
 int FloorToInt(float value) {
     return static_cast<int>(std::floor(value));
 }
@@ -240,67 +229,18 @@ private:
     {
         _Update(player, delta);
 
-        static int lastPlayerLevel = 1;
-        static bool wasInCombat = false;
         static bool initialized = false;
 
-        // Инициализируем один раз
+        // Инициализируем для подсказок 
         if (!initialized) {
             initialized = true;
-            // Сбрасываем при первой инициализации
-            HintManager::GetSingleton().resetAllHints();
         }
-
+      
         // виджет штрафов
         if (timeUpdateSkills >= 3 && !(player->IsInCombat())) {
             PrismaUI->Invoke(view, buildCrimeDataScript().c_str());
         }
-
-        // Проверяем условия подсказок каждый кадр
-        int currentLevel = player->GetLevel();
-        bool isInCombat = player->IsInCombat();
-
-        // После создания персонажа (уровень 1)
-        if (currentLevel == 1 && lastPlayerLevel == 1) {
-            HintManager::GetSingleton().showHintOnce("interface_settings");
-        }
-
-        // При поднятии 2 уровня
-        if (currentLevel == 2 && lastPlayerLevel == 1) {
-            HintManager::GetSingleton().showHintOnce("character_enhancement");
-        }
-
-        // При поднятии 4 уровня
-        if (currentLevel == 4 && lastPlayerLevel == 3) {
-            HintManager::GetSingleton().showHintOnce("skill_points_purchase");
-        }
-
-        // При поднятии 5, 25, 45 уровня
-        if ((currentLevel == 5 || currentLevel == 25 || currentLevel == 45) &&
-            lastPlayerLevel == currentLevel - 1) {
-            HintManager::GetSingleton().showHintOnce("god_worship");
-        }
-
-        // При поднятии 7 уровня
-        if (currentLevel == 7 && lastPlayerLevel == 6) {
-            HintManager::GetSingleton().showHintOnce("experience_training");
-        }
-
-        // При поднятии 8 уровня
-        if (currentLevel == 8 && lastPlayerLevel == 7) {
-            HintManager::GetSingleton().showHintOnce("damage_types");
-        }
-
-        // При поднятии 9 уровня
-        if (currentLevel == 9 && lastPlayerLevel == 8) {
-            HintManager::GetSingleton().showHintOnce("resistances");
-        }
-
-        // При поднятии 10 уровня
-        if (currentLevel == 10 && lastPlayerLevel == 9) {
-            HintManager::GetSingleton().showHintOnce("damage_penetration");
-        }
-
+        
         // При весе 95% от макс
         float currentWeight = player->AsActorValueOwner()->GetActorValue(RE::ActorValue::kCarryWeight);
         float maxWeight = player->AsActorValueOwner()->GetPermanentActorValue(RE::ActorValue::kCarryWeight);
@@ -308,38 +248,7 @@ private:
             HintManager::GetSingleton().showHintOnce("backpack");
         }
 
-        // При выходе из боя
-        if (wasInCombat && !isInCombat) {
-            HintManager::GetSingleton().showHintOnce("loot_conversion");
-        }
-
-        // При снижении расходуемого атрибута меньше 20 ед вне боя
-        if (!isInCombat) {
-            float health = player->AsActorValueOwner()->GetActorValue(RE::ActorValue::kHealth);
-            float magicka = player->AsActorValueOwner()->GetActorValue(RE::ActorValue::kMagicka);
-            float stamina = player->AsActorValueOwner()->GetActorValue(RE::ActorValue::kStamina);
-
-            if ((health > 0 && health < 20.0f) ||
-                (magicka > 0 && magicka < 20.0f) ||
-                (stamina > 0 && stamina < 20.0f)) {
-                HintManager::GetSingleton().showHintOnce("movement_restrictions");
-            }
-        }
-
-        // При отрицательном значении любой из характеристик
-        float currentHealth = player->AsActorValueOwner()->GetActorValue(RE::ActorValue::kHealth);
-        float currentMagicka = player->AsActorValueOwner()->GetActorValue(RE::ActorValue::kMagicka);
-        float currentStamina = player->AsActorValueOwner()->GetActorValue(RE::ActorValue::kStamina);
-
-        if (currentHealth < 0 || currentMagicka < 0 || currentStamina < 0) {
-            HintManager::GetSingleton().showHintOnce("negative_attribute_penalties");
-        }
-
-        // Обновляем состояние
-        lastPlayerLevel = currentLevel;
-        wasInCombat = isInCombat;
-
-        // Существующая логика обновления навыков
+        // полоски навыков
         if (timeUpdateSkills >= 3 && !(player->IsInCombat())) {
             timeUpdateSkills = 0;
             ProcessSkillsUpdate(player);
@@ -353,130 +262,64 @@ private:
 };
 
 class SaveMessage
-	{
-	public:
-		static void Hook(SKSE::Trampoline& trampoline)
-		{
-			_ShowHUDMessage =
-				trampoline.write_call<5>(REL::ID(50718).address() + 0x13ca,
-					ShowHUDMessage);
-			_ShowHUDMessage02 =
-				trampoline.write_call<5>(REL::ID(39366).address() + 0x8f7,
-					ShowHUDMessage02);
-			_ShowHUDMessage03 =
-				trampoline.write_call<5>(REL::ID(50737).address() + 0xaf,
-					ShowHUDMessage03);
-			_ShowHUDMessage04 =
-				trampoline.write_call<5>(REL::ID(51842).address() + 0x4d,
-					ShowHUDMessage04);
-			_ShowHUDMessage05 =
-				trampoline.write_call<5>(REL::ID(34862).address() + 0x3bb,
-					ShowHUDMessage05);
-		}
-
-	private:
-		static void ShowSaveWidget()
-		{
-			PrismaUI->Invoke(view, "data_from_skse_for_save_widget()");
-		}
-		static void ShowHUDMessage(char* text, char* sound, char no_repeat)
-		{
-			ShowSaveWidget();
-			return;
-		}
-		static inline REL::Relocation<decltype(ShowHUDMessage)> _ShowHUDMessage;
-		static void ShowHUDMessage02(char* text, char* sound, char no_repeat)
-		{
-			ShowSaveWidget();
-			return;
-		}
-		static inline REL::Relocation<decltype(ShowHUDMessage02)> _ShowHUDMessage02;
-		static void ShowHUDMessage03(char* text, char* sound, char no_repeat)
-		{
-			ShowSaveWidget();
-			return;
-		}
-		static inline REL::Relocation<decltype(ShowHUDMessage03)> _ShowHUDMessage03;
-		static void ShowHUDMessage04(char* text, char* sound, char no_repeat)
-		{
-			ShowSaveWidget();
-			return;
-		}
-		static inline REL::Relocation<decltype(ShowHUDMessage04)> _ShowHUDMessage04;
-		static void ShowHUDMessage05(char* text, char* sound, char no_repeat)
-		{
-			ShowSaveWidget();
-			return;
-		}
-		static inline REL::Relocation<decltype(ShowHUDMessage05)> _ShowHUDMessage05;
-	};
-
-
-class OnLocationCleared
 {
 public:
     static void Hook(SKSE::Trampoline& trampoline)
     {
-
-        _LocationCleared =
-            trampoline.write_call<5>(REL::ID(36872).address() + 0x1142,
-                LocationCleared);
+        _ShowHUDMessage =
+            trampoline.write_call<5>(REL::ID(50718).address() + 0x13ca,
+                ShowHUDMessage);
+        _ShowHUDMessage02 =
+            trampoline.write_call<5>(REL::ID(39366).address() + 0x8f7,
+                ShowHUDMessage02);
+        _ShowHUDMessage03 =
+            trampoline.write_call<5>(REL::ID(50737).address() + 0xaf,
+                ShowHUDMessage03);
+        _ShowHUDMessage04 =
+            trampoline.write_call<5>(REL::ID(51842).address() + 0x4d,
+                ShowHUDMessage04);
+        _ShowHUDMessage05 =
+            trampoline.write_call<5>(REL::ID(34862).address() + 0x3bb,
+                ShowHUDMessage05);
     }
 
 private:
-    static bool LocationCleared(RE::BGSLocation* a1, int a2, char a3)
+    static void ShowSaveWidget()
     {
-        auto cleared = _LocationCleared(a1, a2, a3);
-        if (cleared) {
-            //logger::info("Location {} cleared", a1->fullName.c_str());
-            std::string outScript = "updateLocationWidget('" + std::string(a1->fullName.c_str()) + "')";
-            PrismaUI->Invoke(view, outScript.c_str());
-        }
-        return cleared;
+        PrismaUI->Invoke(view, "data_from_skse_for_save_widget()");
     }
-
-    static inline REL::Relocation<decltype(LocationCleared)> _LocationCleared;
+    static void ShowHUDMessage(char* text, char* sound, char no_repeat)
+    {
+        ShowSaveWidget();
+        return;
+    }
+    static inline REL::Relocation<decltype(ShowHUDMessage)> _ShowHUDMessage;
+    static void ShowHUDMessage02(char* text, char* sound, char no_repeat)
+    {
+        ShowSaveWidget();
+        return;
+    }
+    static inline REL::Relocation<decltype(ShowHUDMessage02)> _ShowHUDMessage02;
+    static void ShowHUDMessage03(char* text, char* sound, char no_repeat)
+    {
+        ShowSaveWidget();
+        return;
+    }
+    static inline REL::Relocation<decltype(ShowHUDMessage03)> _ShowHUDMessage03;
+    static void ShowHUDMessage04(char* text, char* sound, char no_repeat)
+    {
+        ShowSaveWidget();
+        return;
+    }
+    static inline REL::Relocation<decltype(ShowHUDMessage04)> _ShowHUDMessage04;
+    static void ShowHUDMessage05(char* text, char* sound, char no_repeat)
+    {
+        ShowSaveWidget();
+        return;
+    }
+    static inline REL::Relocation<decltype(ShowHUDMessage05)> _ShowHUDMessage05;
 };
 
-class DeathEventHandler : public RE::BSTEventSink<RE::TESDeathEvent> {
-public:
-    static void Install() {
-        auto scriptEventSource = RE::ScriptEventSourceHolder::GetSingleton();
-        if (scriptEventSource) {
-            scriptEventSource->AddEventSink(GetSingleton());
-            logger::info("Death event handler installed");
-        }
-    }
-
-    RE::BSEventNotifyControl ProcessEvent(const RE::TESDeathEvent* event, RE::BSTEventSource<RE::TESDeathEvent>*) override {
-        if (event && event->dead && event->actorDying) {
-            RE::Actor* deadActor = event->actorDying->As<RE::Actor>();
-
-            // Базовая проверка на валидность актора
-            if (!deadActor || deadActor->IsPlayerRef()) {
-                return RE::BSEventNotifyControl::kContinue;
-            }
-
-            // Проверка что убил игрок (простая версия)
-            auto player = RE::PlayerCharacter::GetSingleton();
-            if (!player) return RE::BSEventNotifyControl::kContinue;
-
-            // Проверка враждебности и что это не призыв
-            if (deadActor->IsHostileToActor(player) && !deadActor->IsSummoned()) {
-                KillCounter::Increment();
-                logger::info("Kill counted: {}", deadActor->GetDisplayFullName());
-            }
-        }
-        return RE::BSEventNotifyControl::kContinue;
-    }
-
-    static DeathEventHandler* GetSingleton() {
-        static DeathEventHandler instance;
-        return &instance;
-    }
-};
-
-// Объявление внешних переменных
 PRISMA_UI_API::IVPrismaUI1* PrismaUI = nullptr;
 PrismaView view = 0;
 STB_UI_API::IVPrismaUI1* STBUI;
@@ -486,8 +329,7 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
     using namespace RE;
 
     switch (message->type) {
-    case MessagingInterface::kPostLoad:
-        // Инициализируем PrismaUI API
+    case MessagingInterface::kPostLoad: 
         if (!PrismaUI) {
             logger::error("Failed to get PrismaUI API");
             return;
@@ -506,27 +348,27 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
 	    Rift = TESForm::LookupByID<TESFaction>(0x2816B);
 	    Hjaalmarch = TESForm::LookupByID<TESFaction>(0x2816D);
 
-        PrismaUI = static_cast<PRISMA_UI_API::IVPrismaUI1*>(
-            PRISMA_UI_API::RequestPluginAPI(PRISMA_UI_API::InterfaceVersion::V1)
-            );
-        STBUI = static_cast<STB_UI_API::IVPrismaUI1*>(
-            STB_UI_API::RequestPluginAPI(STB_UI_API::InterfaceVersion::V1)
-            );
+        PrismaUI = static_cast<PRISMA_UI_API::IVPrismaUI1*>(PRISMA_UI_API::RequestPluginAPI(PRISMA_UI_API::InterfaceVersion::V1));
+        STBUI = static_cast<STB_UI_API::IVPrismaUI1*>(STB_UI_API::RequestPluginAPI(STB_UI_API::InterfaceVersion::V1));
+
         if (PrismaUI) {
             view = PrismaUI->CreateView("FremUI/index.html", [](PrismaView createdView) {
                 logger::info("PrismaUI view created successfully");
                 
                 SKSE::GetTrampoline().create(500);
-                OnLocationCleared::Hook(SKSE::GetTrampoline());
-				PlayerUpdate::Hook(); // полоски навыков
+
+				PlayerUpdate::Hook(); 
                 logger::info("PlayerUpdate successfully initialized");
-				SaveMessage::Hook(SKSE::GetTrampoline()); // виджет сохранения
+
+				SaveMessage::Hook(SKSE::GetTrampoline()); 
 				logger::info("SaveMessage successfully initialized");
-				MenuHandler::register_(); // резисты, лвл, интоксикация
+
+				MenuHandler::register_(); 
 				logger::info("MenuHandler successfully initialized");
+
                 Input::InputEventHandler::Register();
                 logger::info("InputEventHandler successfully initialized");
-                //DeathEventHandler::Install();
+
                 });
 
 			    STBUI->GetView(view);
@@ -539,6 +381,7 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
         break;
     }
 }
+
 
 void SaveCallback(SKSE::SerializationInterface* a_intfc)
 {
