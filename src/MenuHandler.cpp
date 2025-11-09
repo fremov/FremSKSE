@@ -17,7 +17,7 @@ auto MenuHandler::ProcessEvent(const RE::MenuOpenCloseEvent* event, RE::BSTEvent
     if (event) {
         if (auto ui = RE::UI::GetSingleton()) {
             bool isLoadingMenu = ui->IsMenuOpen(RE::LoadingMenu::MENU_NAME);
-            bool shouldShowHints = !(
+            bool shouldShowWidget = !(
                 ui->IsMenuOpen(RE::InventoryMenu::MENU_NAME) ||
                 ui->IsMenuOpen(RE::CraftingMenu::MENU_NAME) ||
                 ui->IsMenuOpen(RE::BarterMenu::MENU_NAME) ||
@@ -38,19 +38,19 @@ auto MenuHandler::ProcessEvent(const RE::MenuOpenCloseEvent* event, RE::BSTEvent
                 );
 
             // ”правление видимостью полосок навыков 
-            PrismaUI->Invoke(view, ("toggleSkillsContainer(" + std::string(shouldShowHints ? "true" : "false") + ")").c_str());
+            PrismaUI->Invoke(view, ("toggleSkillsContainer(" + std::string(shouldShowWidget && !isLoadingMenu ? "true" : "false") + ")").c_str());
 
             // ”правление видимостью виджета сохранени€
-            PrismaUI->Invoke(view, ("toggleSaveWidgetContainer(" + std::string(shouldShowHints ? "true" : "false") + ")").c_str());
+            PrismaUI->Invoke(view, ("toggleSaveWidgetContainer(" + std::string(shouldShowWidget && !isLoadingMenu ? "true" : "false") + ")").c_str());
 
             // ”правление видимостью виджета локаций
-            PrismaUI->Invoke(view, ("toggleLocationWidgetContainer(" + std::string(shouldShowHints && !isLoadingMenu ? "true" : "false") + ")").c_str());
+            PrismaUI->Invoke(view, ("toggleLocationWidgetContainer(" + std::string(shouldShowWidget && !isLoadingMenu ? "true" : "false") + ")").c_str());
 
             // ”правление видимостью виджета штрафов
-            PrismaUI->Invoke(view, ("updateCrimeContainerVisibility(" + std::string(shouldShowHints && !isLoadingMenu ? "true" : "false") + ")").c_str());
+            PrismaUI->Invoke(view, ("updateCrimeContainerVisibility(" + std::string(shouldShowWidget && !isLoadingMenu ? "true" : "false") + ")").c_str());
 
             // ”правление видимостью виджета подсказок
-            PrismaUI->Invoke(view, ("setHintContainerVisibility(" + std::string(shouldShowHints && !isLoadingMenu ? "true" : "false") + ")").c_str());
+            PrismaUI->Invoke(view, ("setHintContainerVisibility(" + std::string(shouldShowWidget && !isLoadingMenu ? "true" : "false") + ")").c_str());
         }
     }
     return RE::BSEventNotifyControl::kContinue;

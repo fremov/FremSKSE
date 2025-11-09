@@ -12,7 +12,7 @@
 #include <thread>
 #include <chrono>
 #include <atomic>
-#include "PrismaUI_API.h"
+#include "include/PrismaUI_API.h"
 
 
 #ifdef NDEBUG
@@ -35,4 +35,3 @@ namespace util
 #define DLLEXPORT __declspec(dllexport)
 
 #define RELOCATION_OFFSET(SE, AE) REL::VariantOffset(SE, AE, 0).offset()
-

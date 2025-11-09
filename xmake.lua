@@ -37,6 +37,7 @@ target("FremSKSE")
     add_headerfiles("src/include/PrismaUI_API.h")  
     add_headerfiles("src/include/STB_Widgets_API.h")  
     add_headerfiles("src/include/KillCounter.h")  
+    add_headerfiles("src/include/HintManager.h")  
 
     add_includedirs("src")
     set_pcxxheader("src/include/pch.h")

@@ -10,6 +10,7 @@
 #include <unordered_set>
 #include "include/InputHandler.h"
 #include <include/KillCounter.h>
+#include "include/HintManager.h"
 
 using json = nlohmann::json;
 
@@ -30,130 +31,6 @@ RE::TESFaction* Rift;
 RE::TESFaction* Hjaalmarch;
 
 using json = nlohmann::json;
-
-class SimpleHintReader {
-private:
-    json data;
-
-public:
-    struct HintData {
-        std::string name;
-        std::string description;
-    };
-
-    bool load(const std::string& filename) {
-        std::ifstream file(filename);
-        if (!file.is_open()) {
-            logger::info("Err open json");
-            return false;
-        }
-
-        try {
-            data = json::parse(file);
-            logger::info("JSON loaded successfully: {} hints", data.size());
-            return true;
-        }
-        catch (const std::exception& e) {
-            logger::info("Err read json: {}", e.what());
-            return false;
-        }
-    }
-
-    // Ищем по ID, возвращаем русское название и описание
-    HintData getHintData(const std::string& hintId) {
-        for (const auto& item : data) {
-            if (item.contains("id") && item["id"] == hintId) {
-                HintData result;
-                if (item.contains("name")) {
-                    result.name = item["name"];
-                }
-                if (item.contains("description")) {
-                    result.description = item["description"];
-                }
-                return result;
-            }
-        }
-        return { "", "" }; // Возвращаем пустые строки если не нашли
-    }
-};
-
-class HintManager {
-private:
-    static inline std::unordered_set<std::string> shownHints;
-    static inline std::chrono::steady_clock::time_point lastHintTime;
-    static inline const std::chrono::milliseconds HINT_COOLDOWN = std::chrono::seconds(12); // 12 секунд между подсказками
-    SimpleHintReader reader;
-
-public:
-    HintManager() {
-        std::string currentPath = std::filesystem::current_path().string();
-        //logger::info("PAth {}", currentPath);
-        if (!reader.load(currentPath + "/[STB] Mod Organizer/mods/STB Widgets/SKSE/Plugins/StorageUtilData/data_hints.json")) {
-            logger::info("Ne udalos zagrs file");
-        }
-        lastHintTime = std::chrono::steady_clock::now() - HINT_COOLDOWN; // Инициализируем чтобы первая подсказка показывалась сразу
-    }
-
-    void showHintOnce(const std::string& hintId) {
-        if (shownHints.count(hintId) > 0) {
-            return;
-        }
-
-        // Проверяем cooldown
-        auto now = std::chrono::steady_clock::now();
-        if (now - lastHintTime < HINT_COOLDOWN) {
-            return; // Слишком рано после предыдущей подсказки
-        }
-
-        auto hintData = reader.getHintData(hintId);
-        if (!hintData.name.empty() && !hintData.description.empty()) {
-            // Сначала закрываем текущую подсказку
-            std::string closeScript = "if (typeof forceUnmountHints === 'function') forceUnmountHints();";
-            PrismaUI->Invoke(view, closeScript.c_str());
-
-            // Ждем немного перед показом следующей
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-            // Экранируем для JavaScript
-            std::string escaped_name = escapeForJavaScript(hintData.name);
-            std::string escaped_description = escapeForJavaScript(hintData.description);
-
-            // Показываем новую подсказку
-            std::string script = "if (window.receiveHintData) { window.receiveHintData('" +
-                escaped_name + "', `" + escaped_description + "`); }";
-
-            PrismaUI->Invoke(view, script.c_str());
-            shownHints.insert(hintId);
-            lastHintTime = now;
-
-            logger::info("Showing hint: {} - {}", hintId, hintData.name);
-        }
-    }
-
-    // Сбросить все показанные подсказки (для тестирования)
-    void resetAllHints() {
-        shownHints.clear();
-        lastHintTime = std::chrono::steady_clock::now() - HINT_COOLDOWN;
-    }
-
-private:
-    std::string escapeForJavaScript(const std::string& input) {
-        std::string result;
-        for (char c : input) {
-            switch (c) {
-            case '\\': result += "\\\\"; break;
-            case '\'': result += "\\'"; break;
-            case '\"': result += "\\\""; break;
-            case '`': result += "\\`"; break;
-            case '\n': result += "\\n"; break;
-            case '\r': result += "\\r"; break;
-            case '\t': result += "\\t"; break;
-            default: result += c; break;
-            }
-        }
-        return result;
-    }
-};
 
 // Функция для округления в меньшую сторону
 int FloorToInt(float value) {
@@ -362,9 +239,17 @@ private:
     static void Update(RE::PlayerCharacter* player, float delta)
     {
         _Update(player, delta);
-        static HintManager hintManager;
+
         static int lastPlayerLevel = 1;
         static bool wasInCombat = false;
+        static bool initialized = false;
+
+        // Инициализируем один раз
+        if (!initialized) {
+            initialized = true;
+            // Сбрасываем при первой инициализации
+            HintManager::GetSingleton().resetAllHints();
+        }
 
         // виджет штрафов
         if (timeUpdateSkills >= 3 && !(player->IsInCombat())) {
@@ -377,55 +262,55 @@ private:
 
         // После создания персонажа (уровень 1)
         if (currentLevel == 1 && lastPlayerLevel == 1) {
-            hintManager.showHintOnce("interface_settings");
+            HintManager::GetSingleton().showHintOnce("interface_settings");
         }
 
         // При поднятии 2 уровня
         if (currentLevel == 2 && lastPlayerLevel == 1) {
-            hintManager.showHintOnce("character_enhancement");
+            HintManager::GetSingleton().showHintOnce("character_enhancement");
         }
 
         // При поднятии 4 уровня
         if (currentLevel == 4 && lastPlayerLevel == 3) {
-            hintManager.showHintOnce("skill_points_purchase");
+            HintManager::GetSingleton().showHintOnce("skill_points_purchase");
         }
 
         // При поднятии 5, 25, 45 уровня
         if ((currentLevel == 5 || currentLevel == 25 || currentLevel == 45) &&
             lastPlayerLevel == currentLevel - 1) {
-            hintManager.showHintOnce("god_worship");
+            HintManager::GetSingleton().showHintOnce("god_worship");
         }
 
         // При поднятии 7 уровня
         if (currentLevel == 7 && lastPlayerLevel == 6) {
-            hintManager.showHintOnce("experience_training");
+            HintManager::GetSingleton().showHintOnce("experience_training");
         }
 
         // При поднятии 8 уровня
         if (currentLevel == 8 && lastPlayerLevel == 7) {
-            hintManager.showHintOnce("damage_types");
+            HintManager::GetSingleton().showHintOnce("damage_types");
         }
 
         // При поднятии 9 уровня
         if (currentLevel == 9 && lastPlayerLevel == 8) {
-            hintManager.showHintOnce("resistances");
+            HintManager::GetSingleton().showHintOnce("resistances");
         }
 
         // При поднятии 10 уровня
         if (currentLevel == 10 && lastPlayerLevel == 9) {
-            hintManager.showHintOnce("damage_penetration");
+            HintManager::GetSingleton().showHintOnce("damage_penetration");
         }
 
         // При весе 95% от макс
         float currentWeight = player->AsActorValueOwner()->GetActorValue(RE::ActorValue::kCarryWeight);
         float maxWeight = player->AsActorValueOwner()->GetPermanentActorValue(RE::ActorValue::kCarryWeight);
         if (currentWeight / maxWeight >= 0.95f) {
-            hintManager.showHintOnce("backpack");
+            HintManager::GetSingleton().showHintOnce("backpack");
         }
 
         // При выходе из боя
         if (wasInCombat && !isInCombat) {
-            hintManager.showHintOnce("loot_conversion");
+            HintManager::GetSingleton().showHintOnce("loot_conversion");
         }
 
         // При снижении расходуемого атрибута меньше 20 ед вне боя
@@ -437,7 +322,7 @@ private:
             if ((health > 0 && health < 20.0f) ||
                 (magicka > 0 && magicka < 20.0f) ||
                 (stamina > 0 && stamina < 20.0f)) {
-                hintManager.showHintOnce("movement_restrictions");
+                HintManager::GetSingleton().showHintOnce("movement_restrictions");
             }
         }
 
@@ -447,7 +332,7 @@ private:
         float currentStamina = player->AsActorValueOwner()->GetActorValue(RE::ActorValue::kStamina);
 
         if (currentHealth < 0 || currentMagicka < 0 || currentStamina < 0) {
-            hintManager.showHintOnce("negative_attribute_penalties");
+            HintManager::GetSingleton().showHintOnce("negative_attribute_penalties");
         }
 
         // Обновляем состояние
@@ -641,7 +526,7 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
 				logger::info("MenuHandler successfully initialized");
                 Input::InputEventHandler::Register();
                 logger::info("InputEventHandler successfully initialized");
-                DeathEventHandler::Install();
+                //DeathEventHandler::Install();
                 });
 
 			    STBUI->GetView(view);
