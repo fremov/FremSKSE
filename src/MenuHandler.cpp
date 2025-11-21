@@ -50,7 +50,7 @@ auto MenuHandler::ProcessEvent(const RE::MenuOpenCloseEvent* event, RE::BSTEvent
             PrismaUI->Invoke(view, ("updateCrimeContainerVisibility(" + std::string(shouldShowWidget && !isLoadingMenu ? "true" : "false") + ")").c_str());
 
             // ”правление видимостью виджета подсказок
-            PrismaUI->Invoke(view, ("setHintContainerVisibility(" + std::string(shouldShowWidget && !isLoadingMenu ? "true" : "false") + ")").c_str());
+            //PrismaUI->Invoke(view, ("setHintContainerVisibility(" + std::string(shouldShowWidget && !isLoadingMenu ? "true" : "false") + ")").c_str());
         }
     }
     return RE::BSEventNotifyControl::kContinue;

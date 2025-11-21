@@ -108,17 +108,17 @@ namespace Input {
                     continue;
                 }
                 // 0xD3 - del
-                if (key == 0xD3 && button->IsDown()) {
+                /*if (key == 0xD3 && button->IsDown()) {
                     PrismaUI->Invoke(view, "updateWidgetHintEnabled(false)");
-                }
+                }*/
                 // 0x1C - enter
-                if (key == 0x1C && button->IsDown()) {
+                /*if (key == 0x1C && button->IsDown()) {
 
                     std::string unmountScript = "forceUnmountHints();";
                     PrismaUI->Invoke(view, unmountScript.c_str());
 
                     HintManager::GetSingleton().onHintClosed();
-                }
+                }*/
             }
         }
 

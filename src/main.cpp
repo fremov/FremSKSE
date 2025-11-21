@@ -229,12 +229,12 @@ private:
     {
         _Update(player, delta);
 
-        static bool initialized = false;
+        //static bool initialized = false;
 
-        // Инициализируем для подсказок 
-        if (!initialized) {
-            initialized = true;
-        }
+        //// Инициализируем для подсказок 
+        //if (!initialized) {
+        //    initialized = true;
+        //}
       
         // виджет штрафов
         if (timeUpdateSkills >= 3 && !(player->IsInCombat())) {
@@ -242,11 +242,11 @@ private:
         }
         
         // При весе 95% от макс
-        float currentWeight = player->AsActorValueOwner()->GetActorValue(RE::ActorValue::kCarryWeight);
+        /*float currentWeight = player->AsActorValueOwner()->GetActorValue(RE::ActorValue::kCarryWeight);
         float maxWeight = player->AsActorValueOwner()->GetPermanentActorValue(RE::ActorValue::kCarryWeight);
         if (currentWeight / maxWeight >= 0.95f) {
             HintManager::GetSingleton().showHintOnce("backpack");
-        }
+        }*/
 
         // полоски навыков
         if (timeUpdateSkills >= 3 && !(player->IsInCombat())) {
@@ -324,6 +324,34 @@ PRISMA_UI_API::IVPrismaUI1* PrismaUI = nullptr;
 PrismaView view = 0;
 STB_UI_API::IVPrismaUI1* STBUI;
 
+std::string GetString(const std::vector<RE::BSFixedString> a_text) {
+    if (a_text.empty()) {
+        return "";
+    }
+
+    std::string result = a_text[0].c_str(); 
+
+    for (size_t i = 1; i < a_text.size(); ++i) {
+        std::string text = a_text[i].c_str();
+        result += "|" + text;
+    }
+
+    return result;
+}
+
+void FremShowChoiceMsg(RE::StaticFunctionTag*, std::vector<RE::BSFixedString> text)
+{
+    logger::info("FremShowChoiceMsg {}", GetString(text));
+	PrismaUI->Invoke(view, ("updateItemsList('" + GetString(text) + "')").c_str());
+	PrismaUI->Focus(view);
+}
+
+bool FremPapyrusFunctions(RE::BSScript::IVirtualMachine* vm)
+{
+    vm->RegisterFunction("FremShowChoiceMsg", "STB_Functions", FremShowChoiceMsg);
+    return true;
+}
+
 static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
     using namespace SKSE;
     using namespace RE;
@@ -338,6 +366,9 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
         break;
 
     case MessagingInterface::kDataLoaded:
+
+        SKSE::GetPapyrusInterface()->Register(FremPapyrusFunctions);
+
 	    Falkreath = TESForm::LookupByID<TESFaction>(0x28170);
         Pale = TESForm::LookupByID<TESFaction>(0x2816E);
 	    Winterhold = TESForm::LookupByID<TESFaction>(0x2816F);
@@ -369,6 +400,24 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
                 Input::InputEventHandler::Register();
                 logger::info("InputEventHandler successfully initialized");
 
+                });
+                
+                PrismaUI->RegisterJSListener(view, "sendMenuDataSKSE", [](const char* data) -> void {
+                    std::string str(data);
+                    int comma = str.find(',');
+                    int index = std::stoi(str.substr(0, comma));
+                    int count = std::stoi(str.substr(comma + 1));
+                    SKSE::ModCallbackEvent Event;
+                    Event.eventName = "SpawnMenuClosed";
+                    Event.strArg = data;
+                    Event.numArg = 0;
+                    Event.sender = nullptr;
+                    auto modCallback = SKSE::GetModCallbackEventSource();
+                    if (modCallback) {
+                        modCallback->SendEvent(&Event); 
+                    }
+                    logger::info("Index: {}, Count: {}", index, count);
+					PrismaUI->Unfocus(view);
                 });
 
 			    STBUI->GetView(view);
